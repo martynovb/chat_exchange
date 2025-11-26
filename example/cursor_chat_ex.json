@@ -1,0 +1,1485 @@
+{
+     "file_path": "C:\\Users\\Bohdan\\AppData\\Roaming\\Cursor\\User\\workspaceStorage\\333714db3ab94a3320d7de8080f9b3e5\\state.vscdb",
+     "file_name": "state.vscdb",
+     "workspace_id": "333714db3ab94a3320d7de8080f9b3e5",
+     "data": {
+          "tables": {
+               "ItemTable": {
+                    "columns": [
+                         "key",
+                         "value"
+                    ],
+                    "rows": [
+                         {
+                              "key": "__$__isNewStorageMarker",
+                              "value": "true"
+                         },
+                         {
+                              "key": "__$__targetStorageMarker",
+                              "value": {
+                                   "cursorAuth/workspaceOpenedDate": 1,
+                                   "workbench.explorer.views.state": 1,
+                                   "workbench.view.search.state": 1,
+                                   "workbench.scm.views.state": 1,
+                                   "workbench.panel.markers": 1,
+                                   "workbench.panel.output": 1,
+                                   "terminal": 1,
+                                   "workbench.panel.viewContainersWorkspaceState": 1,
+                                   "workbench.auxiliarybar.initialViewContainers": 1,
+                                   "workbench.auxiliarybar.viewContainersWorkspaceState": 1,
+                                   "workbench.panel.composerChatViewPane.44829a04-cec1-4aa6-a709-9568a5c9e90a": 1,
+                                   "cursor/needsComposerInitialOpening": 0,
+                                   "workbench.editor.centered": 1,
+                                   "workbench.zenMode.active": 1,
+                                   "workbench.zenMode.exitInfo": 1,
+                                   "workbench.panel.wasLastMaximized": 1,
+                                   "workbench.sideBar.position": 1,
+                                   "workbench.panel.position": 1,
+                                   "workbench.activityBar.hidden": 1,
+                                   "workbench.sideBar.hidden": 1,
+                                   "workbench.editor.hidden": 1,
+                                   "workbench.panel.hidden": 1,
+                                   "workbench.auxiliaryBar.hidden": 1,
+                                   "workbench.statusBar.hidden": 1,
+                                   "workbench.auxiliarybar.activepanelid": 1,
+                                   "workbench.explorer.treeViewState": 1,
+                                   "history.entries": 1,
+                                   "workbench.view.explorer.numberOfVisibleViews": 1,
+                                   "workbench.layout.initialized": 1,
+                                   "workbench.panel.aichat.44829a04-cec1-4aa6-a709-9568a5c9e90a.numberOfVisibleViews": 1,
+                                   "aiService.generations": 1,
+                                   "aiService.prompts": 1,
+                                   "composer.composerData": 1,
+                                   "cursor/layout/editor.auxiliaryBar.width": 0,
+                                   "output.activechannel": 1,
+                                   "workbench.view.extension.bookmarks.state": 1,
+                                   "workbench.view.extension.project-manager.state": 1,
+                                   "workbench.view.extension.gitlensInspect.state": 1,
+                                   "workbench.view.extension.gitlens.state": 1,
+                                   "workbench.view.extension.gitlensPanel.state": 1,
+                                   "workbench.view.extension.containersView.state": 1,
+                                   "debug.selectedroot": 1,
+                                   "debug.selectedconfigname": 1,
+                                   "workbench.view.debug.state": 1,
+                                   "~remote.forwardedPortsContainer": 1,
+                                   "workbench.panel.repl": 1,
+                                   "debug.uxstate": 1,
+                                   "terminal.integrated.environmentVariableCollectionsV2": 1,
+                                   "vscode.git": 1,
+                                   "mhutchie.git-graph": 1,
+                                   "workbench.view.extension.test.state": 1,
+                                   "ms-python.python": 1,
+                                   "terminal.integrated.layoutInfo": 1,
+                                   "anysphere.cursor-retrieval": 1,
+                                   "eamodio.gitlens": 1,
+                                   "ms-python.debugpy": 1,
+                                   "workbench.editor.languageDetectionOpenedLanguages.workspace": 1,
+                                   "anysphere.cursorpyright": 1,
+                                   "memento/workbench.parts.editor": 0,
+                                   "interactive.sessions": 1,
+                                   "scm:view:visibleRepositories": 1,
+                                   "comments.continueOnComments": 0,
+                                   "memento/workbench.editors.files.textFileEditor": 1,
+                                   "terminal.numberOfVisibleViews": 1
+                              }
+                         },
+                         {
+                              "key": "cursorAuth/workspaceOpenedDate",
+                              "value": "2025-11-26T18:44:59.952Z"
+                         },
+                         {
+                              "key": "workbench.explorer.views.state",
+                              "value": {
+                                   "outline": {
+                                        "collapsed": true,
+                                        "isHidden": true,
+                                        "size": 22
+                                   },
+                                   "timeline": {
+                                        "collapsed": true,
+                                        "isHidden": true,
+                                        "size": 22
+                                   },
+                                   "workbench.explorer.openEditorsView": {
+                                        "collapsed": false,
+                                        "isHidden": true
+                                   },
+                                   "workbench.explorer.fileView": {
+                                        "collapsed": false,
+                                        "isHidden": true,
+                                        "size": 1256
+                                   },
+                                   "npm": {
+                                        "collapsed": true,
+                                        "isHidden": true
+                                   },
+                                   "dartDependencyTree": {
+                                        "collapsed": true,
+                                        "isHidden": true
+                                   },
+                                   "denoTasks": {
+                                        "collapsed": true,
+                                        "isHidden": true
+                                   },
+                                   "commitViewProvider": {
+                                        "collapsed": true,
+                                        "isHidden": true
+                                   },
+                                   "compareCommitViewProvider": {
+                                        "collapsed": true,
+                                        "isHidden": true
+                                   }
+                              }
+                         },
+                         {
+                              "key": "workbench.view.search.state",
+                              "value": {
+                                   "workbench.view.search": {
+                                        "collapsed": false,
+                                        "isHidden": true
+                                   }
+                              }
+                         },
+                         {
+                              "key": "workbench.scm.views.state",
+                              "value": {
+                                   "workbench.scm.repositories": {
+                                        "collapsed": false,
+                                        "isHidden": true
+                                   },
+                                   "workbench.scm": {
+                                        "collapsed": false,
+                                        "isHidden": true
+                                   },
+                                   "workbench.scm.history": {
+                                        "collapsed": false,
+                                        "isHidden": true
+                                   },
+                                   "gitlens.views.repositories": {
+                                        "collapsed": true,
+                                        "isHidden": true
+                                   },
+                                   "gitlens.views.commits": {
+                                        "collapsed": true,
+                                        "isHidden": true
+                                   },
+                                   "gitlens.views.branches": {
+                                        "collapsed": true,
+                                        "isHidden": true
+                                   },
+                                   "gitlens.views.remotes": {
+                                        "collapsed": true,
+                                        "isHidden": true
+                                   },
+                                   "gitlens.views.stashes": {
+                                        "collapsed": true,
+                                        "isHidden": true
+                                   },
+                                   "gitlens.views.tags": {
+                                        "collapsed": true,
+                                        "isHidden": true
+                                   },
+                                   "gitlens.views.worktrees": {
+                                        "collapsed": true,
+                                        "isHidden": true
+                                   },
+                                   "gitlens.views.contributors": {
+                                        "collapsed": true,
+                                        "isHidden": true
+                                   },
+                                   "gitlens.views.scm.grouped": {
+                                        "collapsed": true,
+                                        "isHidden": true
+                                   },
+                                   "bugbot": {
+                                        "collapsed": false,
+                                        "isHidden": true
+                                   }
+                              }
+                         },
+                         {
+                              "key": "workbench.panel.markers",
+                              "value": {
+                                   "workbench.panel.markers.view": {
+                                        "collapsed": false,
+                                        "isHidden": true
+                                   }
+                              }
+                         },
+                         {
+                              "key": "workbench.panel.output",
+                              "value": {
+                                   "workbench.panel.output": {
+                                        "collapsed": false,
+                                        "isHidden": true
+                                   }
+                              }
+                         },
+                         {
+                              "key": "terminal",
+                              "value": {
+                                   "terminal": {
+                                        "collapsed": false,
+                                        "isHidden": true
+                                   }
+                              }
+                         },
+                         {
+                              "key": "workbench.panel.viewContainersWorkspaceState",
+                              "value": [
+                                   {
+                                        "id": "workbench.panel.markers",
+                                        "visible": true
+                                   },
+                                   {
+                                        "id": "workbench.panel.output",
+                                        "visible": true
+                                   },
+                                   {
+                                        "id": "workbench.panel.repl",
+                                        "visible": true
+                                   },
+                                   {
+                                        "id": "terminal",
+                                        "visible": true
+                                   },
+                                   {
+                                        "id": "workbench.panel.testResults",
+                                        "visible": false
+                                   },
+                                   {
+                                        "id": "~remote.forwardedPortsContainer",
+                                        "visible": true
+                                   },
+                                   {
+                                        "id": "workbench.view.extension.gitlensPanel",
+                                        "visible": true
+                                   },
+                                   {
+                                        "id": "refactorPreview",
+                                        "visible": false
+                                   }
+                              ]
+                         },
+                         {
+                              "key": "workbench.auxiliarybar.initialViewContainers",
+                              "value": [
+                                   "workbench.panel.aichat.44829a04-cec1-4aa6-a709-9568a5c9e90a",
+                                   "workbench.panel.aichat.bf1e2185-f493-4766-8ea4-a7647617dff2",
+                                   "workbench.panel.aichat.28a3957a-cb1e-472a-9804-5337517b4223",
+                                   "workbench.panel.aichat.f45f654a-667f-41b6-8fda-2d84c80641f7"
+                              ]
+                         },
+                         {
+                              "key": "workbench.auxiliarybar.viewContainersWorkspaceState",
+                              "value": [
+                                   {
+                                        "id": "workbench.panel.aichat.44829a04-cec1-4aa6-a709-9568a5c9e90a",
+                                        "visible": true
+                                   },
+                                   {
+                                        "id": "workbench.panel.aichat.2631eaa9-915c-4838-a0f1-682aab943876",
+                                        "visible": false
+                                   },
+                                   {
+                                        "id": "workbench.panel.aichat.fc8518c5-7a52-4235-a60e-19fe6af1651e",
+                                        "visible": false
+                                   },
+                                   {
+                                        "id": "workbench.panel.aichat.af1093c5-4ab0-4b92-baa6-b3fe6b6530d7",
+                                        "visible": false
+                                   },
+                                   {
+                                        "id": "workbench.panel.aichat.110bdbe8-cb22-46d4-8988-f31da00f9407",
+                                        "visible": false
+                                   },
+                                   {
+                                        "id": "workbench.panel.aichat.a964d8c6-b43c-40c6-9988-64397b67fd29",
+                                        "visible": false
+                                   },
+                                   {
+                                        "id": "workbench.panel.aichat.bf1e2185-f493-4766-8ea4-a7647617dff2",
+                                        "visible": false
+                                   },
+                                   {
+                                        "id": "workbench.panel.aichat.42cda8a3-2a42-4f04-8f50-975732fd8440",
+                                        "visible": false
+                                   },
+                                   {
+                                        "id": "workbench.panel.aichat.5d2af802-332f-4b22-b93a-dde5defe0a4a",
+                                        "visible": false
+                                   },
+                                   {
+                                        "id": "workbench.panel.aichat.f4a6c248-2da3-4a3d-b052-0f4fb69dab03",
+                                        "visible": false
+                                   },
+                                   {
+                                        "id": "workbench.panel.aichat.3ef45340-0f8b-46c8-959a-2c722d8cf9f1",
+                                        "visible": false
+                                   },
+                                   {
+                                        "id": "workbench.panel.aichat.b0e83a51-ae4b-4aeb-af31-f0fea3c97840",
+                                        "visible": false
+                                   },
+                                   {
+                                        "id": "workbench.panel.aichat.430fde5b-73ef-4de4-8089-d0c14dad4fb5",
+                                        "visible": false
+                                   },
+                                   {
+                                        "id": "workbench.panel.aichat.1264d376-2bfe-47fc-9a72-9f6ca36f6b41",
+                                        "visible": false
+                                   },
+                                   {
+                                        "id": "workbench.panel.aichat.66a51102-767e-44a0-a1a2-885236e0d359",
+                                        "visible": false
+                                   },
+                                   {
+                                        "id": "workbench.panel.aichat.5220b5aa-b3ae-4536-8b95-5682a5c53348",
+                                        "visible": false
+                                   },
+                                   {
+                                        "id": "workbench.panel.aichat.28a3957a-cb1e-472a-9804-5337517b4223",
+                                        "visible": false
+                                   },
+                                   {
+                                        "id": "workbench.panel.aichat.a7149258-2947-424b-94b1-1ec1f3af1ede",
+                                        "visible": false
+                                   },
+                                   {
+                                        "id": "workbench.panel.aichat.e9714910-07ad-47ec-9e14-8051d690fdf6",
+                                        "visible": false
+                                   },
+                                   {
+                                        "id": "workbench.panel.aichat.a3cd76ce-afea-4f59-9064-c778b008b7d5",
+                                        "visible": false
+                                   },
+                                   {
+                                        "id": "workbench.panel.aichat.ff71c0a2-43ce-4e0f-a8aa-e904bda89874",
+                                        "visible": false
+                                   },
+                                   {
+                                        "id": "workbench.panel.aichat.f45f654a-667f-41b6-8fda-2d84c80641f7",
+                                        "visible": false
+                                   },
+                                   {
+                                        "id": "workbench.panel.aichat.de68e979-ba74-4187-b7fb-a9f95239eb52",
+                                        "visible": false
+                                   },
+                                   {
+                                        "id": "workbench.panel.aichat.1b3ff666-f473-4a43-9349-971aa6453886",
+                                        "visible": false
+                                   },
+                                   {
+                                        "id": "workbench.panel.aichat.fe5ac8b2-5380-443a-9164-1329cb7870bd",
+                                        "visible": false
+                                   },
+                                   {
+                                        "id": "workbench.panel.aichat.7e706f44-8e61-45e9-94ee-9461c9320dcb",
+                                        "visible": false
+                                   },
+                                   {
+                                        "id": "workbench.panel.aichat.81f7c099-5ed1-4fcf-8b63-e2c219a0fe87",
+                                        "visible": false
+                                   },
+                                   {
+                                        "id": "workbench.panel.aichat.0dea3f52-f74f-4bf2-b30f-b59fe9a16f36",
+                                        "visible": false
+                                   },
+                                   {
+                                        "id": "workbench.panel.aichat.2b376774-ce15-473d-87d9-63abb577bbec",
+                                        "visible": false
+                                   },
+                                   {
+                                        "id": "workbench.panel.chat",
+                                        "visible": false
+                                   },
+                                   {
+                                        "id": "workbench.panel.chatEditing",
+                                        "visible": false
+                                   }
+                              ]
+                         },
+                         {
+                              "key": "workbench.panel.composerChatViewPane.44829a04-cec1-4aa6-a709-9568a5c9e90a",
+                              "value": {
+                                   "workbench.panel.aichat.view.cac8a6b8-0170-439c-98bc-ccd659dcfe95": {
+                                        "collapsed": false,
+                                        "isHidden": false,
+                                        "size": 1300
+                                   }
+                              }
+                         },
+                         {
+                              "key": "cursor/needsComposerInitialOpening",
+                              "value": "false"
+                         },
+                         {
+                              "key": "workbench.editor.centered",
+                              "value": "false"
+                         },
+                         {
+                              "key": "workbench.zenMode.active",
+                              "value": "false"
+                         },
+                         {
+                              "key": "workbench.zenMode.exitInfo",
+                              "value": {
+                                   "transitionedToCenteredEditorLayout": false,
+                                   "transitionedToFullScreen": false,
+                                   "handleNotificationsDoNotDisturbMode": false,
+                                   "wasVisible": {
+                                        "auxiliaryBar": false,
+                                        "panel": false,
+                                        "sideBar": false
+                                   }
+                              }
+                         },
+                         {
+                              "key": "workbench.panel.wasLastMaximized",
+                              "value": "false"
+                         },
+                         {
+                              "key": "workbench.sideBar.position",
+                              "value": "0"
+                         },
+                         {
+                              "key": "workbench.panel.position",
+                              "value": "2"
+                         },
+                         {
+                              "key": "workbench.activityBar.hidden",
+                              "value": "true"
+                         },
+                         {
+                              "key": "workbench.sideBar.hidden",
+                              "value": "false"
+                         },
+                         {
+                              "key": "workbench.editor.hidden",
+                              "value": "false"
+                         },
+                         {
+                              "key": "workbench.panel.hidden",
+                              "value": "false"
+                         },
+                         {
+                              "key": "workbench.auxiliaryBar.hidden",
+                              "value": "false"
+                         },
+                         {
+                              "key": "workbench.statusBar.hidden",
+                              "value": "false"
+                         },
+                         {
+                              "key": "workbench.auxiliarybar.activepanelid",
+                              "value": "workbench.panel.aichat.44829a04-cec1-4aa6-a709-9568a5c9e90a"
+                         },
+                         {
+                              "key": "workbench.explorer.treeViewState",
+                              "value": {
+                                   "focus": [
+                                        "file:///d%3A/projects/chat_exchange::file:///d%3A/projects/chat_exchange/cursor_chat_finder.py"
+                                   ],
+                                   "selection": [
+                                        "file:///d%3A/projects/chat_exchange::file:///d%3A/projects/chat_exchange/cursor_chat_finder.py"
+                                   ],
+                                   "expanded": [],
+                                   "scrollTop": 0
+                              }
+                         },
+                         {
+                              "key": "history.entries",
+                              "value": [
+                                   {
+                                        "editor": {
+                                             "resource": "file:///d%3A/projects/chat_exchange/cursor_chat_finder.py",
+                                             "forceFile": true,
+                                             "options": {
+                                                  "override": "default"
+                                             }
+                                        }
+                                   },
+                                   {
+                                        "editor": {
+                                             "resource": "file:///d%3A/projects/chat_exchange/claude_chat_finder.py",
+                                             "forceFile": true,
+                                             "options": {
+                                                  "override": "default"
+                                             }
+                                        }
+                                   },
+                                   {
+                                        "editor": {
+                                             "resource": "file:///d%3A/projects/chat_exchange/claude_chats.json",
+                                             "forceFile": true,
+                                             "options": {
+                                                  "override": "default"
+                                             }
+                                        }
+                                   },
+                                   {
+                                        "editor": {
+                                             "resource": "file:///d%3A/projects/chat_exchange/copilot_chats.json",
+                                             "forceFile": true,
+                                             "options": {
+                                                  "override": "default"
+                                             }
+                                        }
+                                   },
+                                   {
+                                        "editor": {
+                                             "resource": "file:///d%3A/projects/chat_exchange/copilot_chat_finder.py",
+                                             "forceFile": true,
+                                             "options": {
+                                                  "override": "default"
+                                             }
+                                        }
+                                   }
+                              ]
+                         },
+                         {
+                              "key": "workbench.view.explorer.numberOfVisibleViews",
+                              "value": "3"
+                         },
+                         {
+                              "key": "workbench.layout.initialized",
+                              "value": "true"
+                         },
+                         {
+                              "key": "workbench.panel.aichat.44829a04-cec1-4aa6-a709-9568a5c9e90a.numberOfVisibleViews",
+                              "value": "1"
+                         },
+                         {
+                              "key": "aiService.generations",
+                              "value": [
+                                   {
+                                        "unixMs": 1764182819161,
+                                        "generationUUID": "32e12ff7-aab1-4fe4-bef9-c1074674873d",
+                                        "type": "composer",
+                                        "textDescription": "@copilot_chat_finder.py go to the finder, I need to export copilot chats as they are. if  there are more than one file merge it and save in json format.\n\nI do not need to use ChatSession or any other model classes"
+                                   },
+                                   {
+                                        "unixMs": 1764183078872,
+                                        "generationUUID": "de5fc81b-e322-42b6-bc05-af232dacbf80",
+                                        "type": "composer",
+                                        "textDescription": "do the same for @claude_chat_finder.py "
+                                   },
+                                   {
+                                        "unixMs": 1764183352081,
+                                        "generationUUID": "beeafe0f-84b2-407a-ab7a-f30c7907722a",
+                                        "type": "composer",
+                                        "textDescription": "I need to same for @cursor_chat_finder.py \n\nBut in case of cursor it requires different approuch since it stores data in vscdb format.\n\nFirsly convert it to sqlite, then go to each sqlite file, fetch it content and save as it was done for other finders"
+                                   }
+                              ]
+                         },
+                         {
+                              "key": "aiService.prompts",
+                              "value": [
+                                   {
+                                        "text": "@copilot_chat_finder.py go to the finder, I need to export copilot chats as they are. if  there are more than one file merge it and save in json format.\n\nI do not need to use ChatSession or any other model classes",
+                                        "commandType": 4
+                                   },
+                                   {
+                                        "text": "do the same for @claude_chat_finder.py ",
+                                        "commandType": 4
+                                   },
+                                   {
+                                        "text": "I need to same for @cursor_chat_finder.py \n\nBut in case of cursor it requires different approuch since it stores data in vscdb format.\n\nFirsly convert it to sqlite, then go to each sqlite file, fetch it content and save as it was done for other finders",
+                                        "commandType": 4
+                                   }
+                              ]
+                         },
+                         {
+                              "key": "composer.composerData",
+                              "value": {
+                                   "allComposers": [
+                                        {
+                                             "type": "head",
+                                             "composerId": "cac8a6b8-0170-439c-98bc-ccd659dcfe95",
+                                             "name": "Export copilot chats to JSON",
+                                             "lastUpdatedAt": 1764183352081,
+                                             "createdAt": 1764182699980,
+                                             "unifiedMode": "agent",
+                                             "forceMode": "edit",
+                                             "hasUnreadMessages": false,
+                                             "contextUsagePercent": 24.82599639892578,
+                                             "totalLinesAdded": 191,
+                                             "totalLinesRemoved": 224,
+                                             "filesChangedCount": 3,
+                                             "subtitle": "cursor_chat_finder.py, claude_chat_finder.py, copilot_chat_finder.py",
+                                             "hasBlockingPendingActions": false,
+                                             "isArchived": false,
+                                             "isDraft": false,
+                                             "isWorktree": false,
+                                             "isSpec": false,
+                                             "isBestOfNSubcomposer": false,
+                                             "numSubComposers": 0,
+                                             "referencedPlans": []
+                                        },
+                                        {
+                                             "type": "head",
+                                             "composerId": "a01ef38d-3727-4035-b429-3447d5854da5",
+                                             "createdAt": 1764182699980,
+                                             "unifiedMode": "chat",
+                                             "forceMode": "edit",
+                                             "hasUnreadMessages": false,
+                                             "totalLinesAdded": 0,
+                                             "totalLinesRemoved": 0,
+                                             "isArchived": false,
+                                             "isDraft": false,
+                                             "isWorktree": false,
+                                             "isSpec": false,
+                                             "isBestOfNSubcomposer": false,
+                                             "numSubComposers": 0,
+                                             "referencedPlans": []
+                                        }
+                                   ],
+                                   "selectedComposerIds": [
+                                        "cac8a6b8-0170-439c-98bc-ccd659dcfe95"
+                                   ],
+                                   "lastFocusedComposerIds": [
+                                        "cac8a6b8-0170-439c-98bc-ccd659dcfe95"
+                                   ],
+                                   "hasMigratedComposerData": false,
+                                   "hasMigratedMultipleComposers": true
+                              }
+                         },
+                         {
+                              "key": "cursor/layout/editor.auxiliaryBar.width",
+                              "value": "465.328125"
+                         },
+                         {
+                              "key": "output.activechannel",
+                              "value": "tasks"
+                         },
+                         {
+                              "key": "workbench.view.extension.bookmarks.state",
+                              "value": {
+                                   "bookmarksExplorer": {
+                                        "collapsed": false,
+                                        "isHidden": true
+                                   },
+                                   "bookmarksHelpAndFeedback": {
+                                        "collapsed": true,
+                                        "isHidden": true
+                                   }
+                              }
+                         },
+                         {
+                              "key": "workbench.view.extension.project-manager.state",
+                              "value": {
+                                   "projectsExplorerFavorites": {
+                                        "collapsed": false,
+                                        "isHidden": true
+                                   },
+                                   "projectsExplorerGit": {
+                                        "collapsed": false,
+                                        "isHidden": true
+                                   },
+                                   "projectsExplorerSVN": {
+                                        "collapsed": false,
+                                        "isHidden": true
+                                   },
+                                   "projectsExplorerAny": {
+                                        "collapsed": false,
+                                        "isHidden": true
+                                   },
+                                   "projectsExplorerMercurial": {
+                                        "collapsed": false,
+                                        "isHidden": true
+                                   },
+                                   "projectsExplorerVSCode": {
+                                        "collapsed": false,
+                                        "isHidden": true
+                                   },
+                                   "projectManagerHelpAndFeedback": {
+                                        "collapsed": true,
+                                        "isHidden": true
+                                   }
+                              }
+                         },
+                         {
+                              "key": "workbench.view.extension.gitlensInspect.state",
+                              "value": {
+                                   "gitlens.views.commitDetails": {
+                                        "collapsed": false,
+                                        "isHidden": true
+                                   },
+                                   "gitlens.views.pullRequest": {
+                                        "collapsed": false,
+                                        "isHidden": true
+                                   },
+                                   "gitlens.views.lineHistory": {
+                                        "collapsed": true,
+                                        "isHidden": true
+                                   },
+                                   "gitlens.views.fileHistory": {
+                                        "collapsed": false,
+                                        "isHidden": true
+                                   },
+                                   "gitlens.views.timeline": {
+                                        "collapsed": false,
+                                        "isHidden": true
+                                   },
+                                   "gitlens.views.searchAndCompare": {
+                                        "collapsed": false,
+                                        "isHidden": true
+                                   }
+                              }
+                         },
+                         {
+                              "key": "workbench.view.extension.gitlens.state",
+                              "value": {
+                                   "gitlens.views.home": {
+                                        "collapsed": false,
+                                        "isHidden": true
+                                   },
+                                   "gitlens.views.launchpad": {
+                                        "collapsed": true,
+                                        "isHidden": true
+                                   },
+                                   "gitlens.views.drafts": {
+                                        "collapsed": true,
+                                        "isHidden": true
+                                   },
+                                   "gitlens.views.workspaces": {
+                                        "collapsed": true,
+                                        "isHidden": true
+                                   }
+                              }
+                         },
+                         {
+                              "key": "workbench.view.extension.gitlensPanel.state",
+                              "value": {
+                                   "gitlens.views.graph": {
+                                        "collapsed": false,
+                                        "isHidden": true
+                                   },
+                                   "gitlens.views.graphDetails": {
+                                        "collapsed": false,
+                                        "isHidden": true
+                                   }
+                              }
+                         },
+                         {
+                              "key": "workbench.view.extension.containersView.state",
+                              "value": {
+                                   "vscode-containers.views.containers": {
+                                        "collapsed": false,
+                                        "isHidden": true
+                                   },
+                                   "vscode-containers.views.images": {
+                                        "collapsed": false,
+                                        "isHidden": true
+                                   },
+                                   "vscode-containers.views.registries": {
+                                        "collapsed": false,
+                                        "isHidden": true
+                                   },
+                                   "vscode-containers.views.networks": {
+                                        "collapsed": true,
+                                        "isHidden": true
+                                   },
+                                   "vscode-containers.views.volumes": {
+                                        "collapsed": true,
+                                        "isHidden": true
+                                   },
+                                   "vscode-containers.views.dockerContexts": {
+                                        "collapsed": true,
+                                        "isHidden": true
+                                   },
+                                   "vscode-containers.views.help": {
+                                        "collapsed": false,
+                                        "isHidden": true
+                                   }
+                              }
+                         },
+                         {
+                              "key": "debug.selectedroot",
+                              "value": "file:///d%3A/projects/chat_exchange/.vscode/launch.json"
+                         },
+                         {
+                              "key": "debug.selectedconfigname",
+                              "value": "Flask"
+                         },
+                         {
+                              "key": "workbench.view.debug.state",
+                              "value": {
+                                   "workbench.debug.welcome": {
+                                        "collapsed": false,
+                                        "isHidden": true
+                                   },
+                                   "workbench.debug.variablesView": {
+                                        "collapsed": false,
+                                        "isHidden": true
+                                   },
+                                   "workbench.debug.watchExpressionsView": {
+                                        "collapsed": false,
+                                        "isHidden": true
+                                   },
+                                   "workbench.debug.callStackView": {
+                                        "collapsed": false,
+                                        "isHidden": true
+                                   },
+                                   "workbench.debug.loadedScriptsView": {
+                                        "collapsed": true,
+                                        "isHidden": true
+                                   },
+                                   "workbench.debug.breakPointsView": {
+                                        "collapsed": false,
+                                        "isHidden": true
+                                   },
+                                   "jsBrowserBreakpoints": {
+                                        "collapsed": true,
+                                        "isHidden": true
+                                   },
+                                   "jsExcludedCallers": {
+                                        "collapsed": true,
+                                        "isHidden": true
+                                   },
+                                   "jsDebugNetworkTree": {
+                                        "collapsed": true,
+                                        "isHidden": true
+                                   },
+                                   "extension.firefox.loadedScripts": {
+                                        "collapsed": true,
+                                        "isHidden": true
+                                   },
+                                   "extension.firefox.eventBreakpoints": {
+                                        "collapsed": true,
+                                        "isHidden": true
+                                   }
+                              }
+                         },
+                         {
+                              "key": "~remote.forwardedPortsContainer",
+                              "value": {
+                                   "~remote.forwardedPorts": {
+                                        "collapsed": false,
+                                        "isHidden": true
+                                   }
+                              }
+                         },
+                         {
+                              "key": "workbench.panel.repl",
+                              "value": {
+                                   "workbench.panel.repl.view": {
+                                        "collapsed": false,
+                                        "isHidden": true
+                                   }
+                              }
+                         },
+                         {
+                              "key": "debug.uxstate",
+                              "value": "default"
+                         },
+                         {
+                              "key": "terminal.integrated.environmentVariableCollectionsV2",
+                              "value": [
+                                   {
+                                        "extensionIdentifier": "vscode.git",
+                                        "collection": [
+                                             [
+                                                  "GIT_ASKPASS",
+                                                  {
+                                                       "variable": "GIT_ASKPASS",
+                                                       "value": "d:\\programs\\cursor\\resources\\app\\extensions\\git\\dist\\askpass.sh",
+                                                       "type": 1,
+                                                       "options": {
+                                                            "applyAtProcessCreation": true,
+                                                            "applyAtShellIntegration": false
+                                                       }
+                                                  }
+                                             ],
+                                             [
+                                                  "VSCODE_GIT_ASKPASS_NODE",
+                                                  {
+                                                       "variable": "VSCODE_GIT_ASKPASS_NODE",
+                                                       "value": "D:\\programs\\cursor\\Cursor.exe",
+                                                       "type": 1,
+                                                       "options": {
+                                                            "applyAtProcessCreation": true,
+                                                            "applyAtShellIntegration": false
+                                                       }
+                                                  }
+                                             ],
+                                             [
+                                                  "VSCODE_GIT_ASKPASS_EXTRA_ARGS",
+                                                  {
+                                                       "variable": "VSCODE_GIT_ASKPASS_EXTRA_ARGS",
+                                                       "value": "",
+                                                       "type": 1,
+                                                       "options": {
+                                                            "applyAtProcessCreation": true,
+                                                            "applyAtShellIntegration": false
+                                                       }
+                                                  }
+                                             ],
+                                             [
+                                                  "VSCODE_GIT_ASKPASS_MAIN",
+                                                  {
+                                                       "variable": "VSCODE_GIT_ASKPASS_MAIN",
+                                                       "value": "d:\\programs\\cursor\\resources\\app\\extensions\\git\\dist\\askpass-main.js",
+                                                       "type": 1,
+                                                       "options": {
+                                                            "applyAtProcessCreation": true,
+                                                            "applyAtShellIntegration": false
+                                                       }
+                                                  }
+                                             ],
+                                             [
+                                                  "VSCODE_GIT_IPC_HANDLE",
+                                                  {
+                                                       "variable": "VSCODE_GIT_IPC_HANDLE",
+                                                       "value": "\\\\.\\pipe\\vscode-git-e99ae122a1-sock",
+                                                       "type": 1,
+                                                       "options": {
+                                                            "applyAtProcessCreation": true,
+                                                            "applyAtShellIntegration": false
+                                                       }
+                                                  }
+                                             ]
+                                        ],
+                                        "description": [
+                                             [
+                                                  "",
+                                                  {
+                                                       "description": "Enables the following features: git auth provider"
+                                                  }
+                                             ]
+                                        ]
+                                   },
+                                   {
+                                        "extensionIdentifier": "ms-python.debugpy",
+                                        "collection": [
+                                             [
+                                                  "PYDEVD_DISABLE_FILE_VALIDATION",
+                                                  {
+                                                       "variable": "PYDEVD_DISABLE_FILE_VALIDATION",
+                                                       "value": "1",
+                                                       "type": 1,
+                                                       "options": {
+                                                            "applyAtProcessCreation": true,
+                                                            "applyAtShellIntegration": false
+                                                       }
+                                                  }
+                                             ],
+                                             [
+                                                  "VSCODE_DEBUGPY_ADAPTER_ENDPOINTS",
+                                                  {
+                                                       "variable": "VSCODE_DEBUGPY_ADAPTER_ENDPOINTS",
+                                                       "value": "c:\\Users\\Bohdan\\.cursor\\extensions\\ms-python.debugpy-2025.14.1-win32-x64\\.noConfigDebugAdapterEndpoints\\endpoint-b40b56b5577a56b4.txt",
+                                                       "type": 1,
+                                                       "options": {
+                                                            "applyAtProcessCreation": true,
+                                                            "applyAtShellIntegration": false
+                                                       }
+                                                  }
+                                             ],
+                                             [
+                                                  "PATH",
+                                                  {
+                                                       "variable": "PATH",
+                                                       "value": ";c:\\Users\\Bohdan\\.cursor\\extensions\\ms-python.debugpy-2025.14.1-win32-x64\\bundled\\scripts\\noConfigScripts",
+                                                       "type": 2,
+                                                       "options": {
+                                                            "applyAtProcessCreation": true,
+                                                            "applyAtShellIntegration": false
+                                                       }
+                                                  }
+                                             ],
+                                             [
+                                                  "BUNDLED_DEBUGPY_PATH",
+                                                  {
+                                                       "variable": "BUNDLED_DEBUGPY_PATH",
+                                                       "value": "c:\\Users\\Bohdan\\.cursor\\extensions\\ms-python.debugpy-2025.14.1-win32-x64\\bundled\\libs\\debugpy",
+                                                       "type": 1,
+                                                       "options": {
+                                                            "applyAtProcessCreation": true,
+                                                            "applyAtShellIntegration": false
+                                                       }
+                                                  }
+                                             ]
+                                        ],
+                                        "description": [
+                                             [
+                                                  "",
+                                                  {
+                                                       "description": "Enables use of [no-config debugging](https://github.com/microsoft/vscode-python-debugger/wiki/No%E2%80%90Config-Debugging), `debugpy <script.py>`, in the terminal."
+                                                  }
+                                             ]
+                                        ]
+                                   }
+                              ]
+                         },
+                         {
+                              "key": "vscode.git",
+                              "value": {
+                                   "closedRepositories": []
+                              }
+                         },
+                         {
+                              "key": "mhutchie.git-graph",
+                              "value": {
+                                   "repoStates": {
+                                        "d:/projects/chat_exchange": {
+                                             "cdvDivider": 0.5,
+                                             "cdvHeight": 250,
+                                             "columnWidths": null,
+                                             "commitOrdering": "default",
+                                             "fileViewType": 0,
+                                             "hideRemotes": [],
+                                             "includeCommitsMentionedByReflogs": 0,
+                                             "issueLinkingConfig": null,
+                                             "lastImportAt": 0,
+                                             "name": null,
+                                             "onlyFollowFirstParent": 0,
+                                             "onRepoLoadShowCheckedOutBranch": 0,
+                                             "onRepoLoadShowSpecificBranches": null,
+                                             "pullRequestConfig": null,
+                                             "showRemoteBranches": true,
+                                             "showRemoteBranchesV2": 0,
+                                             "showStashes": 0,
+                                             "showTags": 0,
+                                             "workspaceFolderIndex": 0
+                                        }
+                                   }
+                              }
+                         },
+                         {
+                              "key": "workbench.view.extension.test.state",
+                              "value": {
+                                   "workbench.view.testing": {
+                                        "collapsed": false,
+                                        "isHidden": true
+                                   },
+                                   "workbench.view.testCoverage": {
+                                        "collapsed": false,
+                                        "isHidden": true
+                                   }
+                              }
+                         },
+                         {
+                              "key": "ms-python.python",
+                              "value": {
+                                   "PYTHON_WORKSPACE_STORAGE_KEYS": [
+                                        {
+                                             "key": "WORKSPACE_DIAGNOSTICS_FILTER",
+                                             "defaultValue": []
+                                        },
+                                        {
+                                             "key": "showNativeTensorBoardPrompt",
+                                             "defaultValue": true
+                                        },
+                                        {
+                                             "key": "autoSelectionInterpretersQueried-d:\\projects\\chat_exchange"
+                                        },
+                                        {
+                                             "key": "PYTHON_EXTENSION_WORKSPACE_STORAGE_KEYS",
+                                             "defaultValue": []
+                                        },
+                                        {
+                                             "key": "autoSelectedWorkspacePythonInterpreter-d:\\projects\\chat_exchange"
+                                        }
+                                   ],
+                                   "autoSelectedWorkspacePythonInterpreter-d:\\projects\\chat_exchange": {
+                                        "id": "D:\\PROJECTS\\CHAT_EXCHANGE\\.VENV\\SCRIPTS\\PYTHON.EXE",
+                                        "sysPrefix": "d:\\projects\\chat_exchange\\.venv",
+                                        "envType": "Venv",
+                                        "envName": ".venv",
+                                        "envPath": "d:\\projects\\chat_exchange\\.venv",
+                                        "path": "d:\\projects\\chat_exchange\\.venv\\Scripts\\python.exe",
+                                        "architecture": 3,
+                                        "sysVersion": "3.14.0 (tags/v3.14.0:ebf955d, Oct  7 2025, 10:15:03) [MSC v.1944 64 bit (AMD64)]",
+                                        "version": {
+                                             "raw": "3.14.0",
+                                             "major": 3,
+                                             "minor": 14,
+                                             "patch": 0,
+                                             "build": [],
+                                             "prerelease": [
+                                                  "final",
+                                                  "0"
+                                             ]
+                                        },
+                                        "displayName": "Python 3.14.0 ('.venv')",
+                                        "detailedDisplayName": "Python 3.14.0 ('.venv': venv)",
+                                        "type": "Virtual"
+                                   },
+                                   "autoSelectionInterpretersQueried-d:\\projects\\chat_exchange": true
+                              }
+                         },
+                         {
+                              "key": "terminal.integrated.layoutInfo",
+                              "value": {
+                                   "workspaceId": "333714db3ab94a3320d7de8080f9b3e5",
+                                   "tabs": [
+                                        {
+                                             "isActive": true,
+                                             "activePersistentProcessId": 7,
+                                             "terminals": [
+                                                  {
+                                                       "relativeSize": 1,
+                                                       "terminal": 7
+                                                  }
+                                             ]
+                                        }
+                                   ]
+                              }
+                         },
+                         {
+                              "key": "anysphere.cursor-retrieval",
+                              "value": {
+                                   "cursor-retrieval-state-version": 1,
+                                   "map/b40b56b5577a56b464210467a439451e07c617536e8524cfc9c61ac46c4fd35e-chat_exchange/repoKeys": {
+                                        "repoName": "8d39814f-e73e-4fb8-9739-9e5338970b07",
+                                        "orthogonalTransformationSeed": 2280994614136276,
+                                        "pathEncryptionKey": "YVF24IB8C5eqTODFPYr_UL1HvUCd6dfJ4s_Zcp5jdf4",
+                                        "pathEncryptionScheme": "aes-256-ctr",
+                                        "canUpdateKey": false
+                                   },
+                                   "map/b40b56b5577a56b464210467a439451e07c617536e8524cfc9c61ac46c4fd35e-chat_exchange/google-oauth2|user_01K8890TK8HNENSFVE79FTH39W/indexingStatus": {
+                                        "globalStatus": {
+                                             "case": "synced",
+                                             "numFiles": 8
+                                        },
+                                        "progress": 100
+                                   }
+                              }
+                         },
+                         {
+                              "key": "eamodio.gitlens",
+                              "value": {
+                                   "gitlens:assumeRepositoriesOnStartup": true,
+                                   "gitlens:gitPath": "C:\\Program Files\\Git\\cmd\\git.exe"
+                              }
+                         },
+                         {
+                              "key": "ms-python.debugpy",
+                              "value": {
+                                   "PYTHON_WORKSPACE_STORAGE_KEYS": [
+                                        {
+                                             "key": "PYTHON_EXTENSION_WORKSPACE_STORAGE_KEYS",
+                                             "defaultValue": []
+                                        }
+                                   ]
+                              }
+                         },
+                         {
+                              "key": "workbench.editor.languageDetectionOpenedLanguages.workspace",
+                              "value": [
+                                   [
+                                        "json",
+                                        true
+                                   ],
+                                   [
+                                        "python",
+                                        true
+                                   ]
+                              ]
+                         },
+                         {
+                              "key": "anysphere.cursorpyright",
+                              "value": {
+                                   "cursorpyright.importedPylanceSettings:workspaceState": true,
+                                   "cursorpyright.importedPylanceSettings:d:\\projects\\chat_exchange": true
+                              }
+                         },
+                         {
+                              "key": "memento/workbench.parts.editor",
+                              "value": {
+                                   "editorpart.state": {
+                                        "serializedGrid": {
+                                             "root": {
+                                                  "type": "branch",
+                                                  "data": [
+                                                       {
+                                                            "type": "leaf",
+                                                            "data": {
+                                                                 "id": 0,
+                                                                 "editors": [
+                                                                      {
+                                                                           "id": "workbench.editors.files.fileEditorInput",
+                                                                           "value": "{\"resourceJSON\":{\"$mid\":1,\"fsPath\":\"d:\\\\projects\\\\chat_exchange\\\\copilot_chat_finder.py\",\"_sep\":1,\"external\":\"file:///d%3A/projects/chat_exchange/copilot_chat_finder.py\",\"path\":\"/d:/projects/chat_exchange/copilot_chat_finder.py\",\"scheme\":\"file\"},\"encoding\":\"utf8\"}"
+                                                                      },
+                                                                      {
+                                                                           "id": "workbench.editors.files.fileEditorInput",
+                                                                           "value": "{\"resourceJSON\":{\"$mid\":1,\"fsPath\":\"d:\\\\projects\\\\chat_exchange\\\\cursor_chat_finder.py\",\"_sep\":1,\"external\":\"file:///d%3A/projects/chat_exchange/cursor_chat_finder.py\",\"path\":\"/d:/projects/chat_exchange/cursor_chat_finder.py\",\"scheme\":\"file\"},\"encoding\":\"utf8\"}"
+                                                                      }
+                                                                 ],
+                                                                 "mru": [
+                                                                      1,
+                                                                      0
+                                                                 ]
+                                                            },
+                                                            "size": 1034
+                                                       }
+                                                  ],
+                                                  "size": 1752
+                                             },
+                                             "orientation": 0,
+                                             "width": 1752,
+                                             "height": 1034
+                                        },
+                                        "activeGroup": 0,
+                                        "mostRecentActiveGroups": [
+                                             0
+                                        ]
+                                   }
+                              }
+                         },
+                         {
+                              "key": "interactive.sessions",
+                              "value": []
+                         },
+                         {
+                              "key": "scm:view:visibleRepositories",
+                              "value": {
+                                   "all": [
+                                        "git:Git:file:///d%3A/projects/chat_exchange"
+                                   ],
+                                   "sortKey": "discoveryTime",
+                                   "visible": [
+                                        0
+                                   ]
+                              }
+                         },
+                         {
+                              "key": "comments.continueOnComments",
+                              "value": []
+                         },
+                         {
+                              "key": "memento/workbench.editors.files.textFileEditor",
+                              "value": {
+                                   "textEditorViewState": [
+                                        [
+                                             "file:///d%3A/projects/chat_exchange/copilot_chat_finder.py",
+                                             {
+                                                  "0": {
+                                                       "cursorState": [
+                                                            {
+                                                                 "inSelectionMode": false,
+                                                                 "selectionStart": {
+                                                                      "lineNumber": 98,
+                                                                      "column": 37
+                                                                 },
+                                                                 "position": {
+                                                                      "lineNumber": 98,
+                                                                      "column": 37
+                                                                 }
+                                                            }
+                                                       ],
+                                                       "viewState": {
+                                                            "scrollLeft": 0,
+                                                            "firstPosition": {
+                                                                 "lineNumber": 71,
+                                                                 "column": 1
+                                                            },
+                                                            "firstPositionDeltaTop": 0
+                                                       },
+                                                       "contributionsState": {
+                                                            "editor.contrib.folding": {
+                                                                 "lineCount": 154,
+                                                                 "provider": "indent",
+                                                                 "foldedImports": false
+                                                            },
+                                                            "editor.contrib.wordHighlighter": true
+                                                       }
+                                                  }
+                                             }
+                                        ],
+                                        [
+                                             "file:///d%3A/projects/chat_exchange/copilot_chats.json",
+                                             {
+                                                  "0": {
+                                                       "cursorState": [
+                                                            {
+                                                                 "inSelectionMode": false,
+                                                                 "selectionStart": {
+                                                                      "lineNumber": 73,
+                                                                      "column": 36
+                                                                 },
+                                                                 "position": {
+                                                                      "lineNumber": 73,
+                                                                      "column": 36
+                                                                 }
+                                                            }
+                                                       ],
+                                                       "viewState": {
+                                                            "scrollLeft": 0,
+                                                            "firstPosition": {
+                                                                 "lineNumber": 59,
+                                                                 "column": 1
+                                                            },
+                                                            "firstPositionDeltaTop": 0
+                                                       },
+                                                       "contributionsState": {
+                                                            "editor.contrib.folding": {
+                                                                 "collapsedRegions": [
+                                                                      {
+                                                                           "startLineNumber": 3,
+                                                                           "endLineNumber": 27,
+                                                                           "isCollapsed": true,
+                                                                           "source": 0,
+                                                                           "checksum": 562714
+                                                                      },
+                                                                      {
+                                                                           "startLineNumber": 29,
+                                                                           "endLineNumber": 53,
+                                                                           "isCollapsed": true,
+                                                                           "source": 0,
+                                                                           "checksum": -5481
+                                                                      },
+                                                                      {
+                                                                           "startLineNumber": 74,
+                                                                           "endLineNumber": 47063,
+                                                                           "isCollapsed": true,
+                                                                           "source": 0,
+                                                                           "checksum": 701771
+                                                                      },
+                                                                      {
+                                                                           "startLineNumber": 75,
+                                                                           "endLineNumber": 35103,
+                                                                           "isCollapsed": true,
+                                                                           "source": 0,
+                                                                           "checksum": -832523
+                                                                      }
+                                                                 ],
+                                                                 "lineCount": 202100,
+                                                                 "provider": "syntax",
+                                                                 "foldedImports": false
+                                                            },
+                                                            "editor.contrib.wordHighlighter": false
+                                                       }
+                                                  }
+                                             }
+                                        ],
+                                        [
+                                             "file:///d%3A/projects/chat_exchange/claude_chats.json",
+                                             {
+                                                  "0": {
+                                                       "cursorState": [
+                                                            {
+                                                                 "inSelectionMode": true,
+                                                                 "selectionStart": {
+                                                                      "lineNumber": 241,
+                                                                      "column": 26
+                                                                 },
+                                                                 "position": {
+                                                                      "lineNumber": 241,
+                                                                      "column": 30
+                                                                 }
+                                                            }
+                                                       ],
+                                                       "viewState": {
+                                                            "scrollLeft": 0,
+                                                            "firstPosition": {
+                                                                 "lineNumber": 413,
+                                                                 "column": 1
+                                                            },
+                                                            "firstPositionDeltaTop": -14
+                                                       },
+                                                       "contributionsState": {
+                                                            "editor.contrib.folding": {
+                                                                 "lineCount": 24672,
+                                                                 "provider": "syntax",
+                                                                 "foldedImports": false
+                                                            },
+                                                            "editor.contrib.wordHighlighter": false
+                                                       }
+                                                  }
+                                             }
+                                        ],
+                                        [
+                                             "file:///d%3A/projects/chat_exchange/claude_chat_finder.py",
+                                             {
+                                                  "0": {
+                                                       "cursorState": [
+                                                            {
+                                                                 "inSelectionMode": false,
+                                                                 "selectionStart": {
+                                                                      "lineNumber": 139,
+                                                                      "column": 35
+                                                                 },
+                                                                 "position": {
+                                                                      "lineNumber": 139,
+                                                                      "column": 35
+                                                                 }
+                                                            }
+                                                       ],
+                                                       "viewState": {
+                                                            "scrollLeft": 0,
+                                                            "firstPosition": {
+                                                                 "lineNumber": 137,
+                                                                 "column": 1
+                                                            },
+                                                            "firstPositionDeltaTop": -12
+                                                       },
+                                                       "contributionsState": {
+                                                            "editor.contrib.folding": {
+                                                                 "lineCount": 208,
+                                                                 "provider": "indent",
+                                                                 "foldedImports": false
+                                                            },
+                                                            "editor.contrib.wordHighlighter": false
+                                                       }
+                                                  }
+                                             }
+                                        ],
+                                        [
+                                             "file:///d%3A/projects/chat_exchange/cursor_chat_finder.py",
+                                             {
+                                                  "0": {
+                                                       "cursorState": [
+                                                            {
+                                                                 "inSelectionMode": false,
+                                                                 "selectionStart": {
+                                                                      "lineNumber": 1,
+                                                                      "column": 1
+                                                                 },
+                                                                 "position": {
+                                                                      "lineNumber": 1,
+                                                                      "column": 1
+                                                                 }
+                                                            }
+                                                       ],
+                                                       "viewState": {
+                                                            "scrollLeft": 0,
+                                                            "firstPosition": {
+                                                                 "lineNumber": 69,
+                                                                 "column": 1
+                                                            },
+                                                            "firstPositionDeltaTop": -2
+                                                       },
+                                                       "contributionsState": {
+                                                            "editor.contrib.folding": {
+                                                                 "lineCount": 345,
+                                                                 "provider": "indent",
+                                                                 "foldedImports": false
+                                                            },
+                                                            "editor.contrib.wordHighlighter": false
+                                                       }
+                                                  }
+                                             }
+                                        ]
+                                   ]
+                              }
+                         },
+                         {
+                              "key": "terminal.numberOfVisibleViews",
+                              "value": "1"
+                         }
+                    ],
+                    "row_count": 66
+               },
+               "cursorDiskKV": {
+                    "columns": [
+                         "key",
+                         "value"
+                    ],
+                    "rows": [],
+                    "row_count": 0
+               }
+          }
+     }
+}

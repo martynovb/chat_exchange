@@ -11,27 +11,14 @@ from __future__ import annotations
 import json
 import pathlib
 import platform
-import datetime
 import sqlite3
-import logging
-import os
-from typing import List, Optional, Dict, Any, Iterable, Tuple
-from collections import defaultdict
+from typing import List, Optional, Dict, Any
 
-from base_chat_finder import ChatFinder, ChatSession, ChatMessage, ProjectInfo
-from chat_message_parser import parse_cursor_messages
-
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+"""This module exports Cursor chat data from vscdb/sqlite files as-is, merging multiple files."""
 
 
-class CursorChatFinder(ChatFinder):
+class CursorChatFinder:
     """Find and extract Cursor chat histories from SQLite databases."""
-
-    @property
-    def name(self) -> str:
-        return "Cursor"
 
     def get_storage_root(self) -> Optional[pathlib.Path]:
         """Return the path to Cursor's storage directory."""
@@ -45,293 +32,184 @@ class CursorChatFinder(ChatFinder):
         elif system == "Linux":
             return home / ".config" / "Cursor"
         else:
-            raise RuntimeError(f"Unsupported OS: {system}")
-
-    def _load_json_from_db(self, cur: sqlite3.Cursor, table: str, key: str) -> Optional[Any]:
-        """Load and parse JSON value from a database table."""
-        cur.execute(f"SELECT value FROM {table} WHERE key=?", (key,))
-        row = cur.fetchone()
-        if row:
-            try:
-                return json.loads(row[0])
-            except Exception as e:
-                logger.debug(f"Failed to parse JSON for {key}: {e}")
-        return None
-
-    def _iter_bubbles_from_disk_kv(self, db: pathlib.Path) -> Iterable[Tuple[str, str, str, str]]:
-        """Yield (composerId, role, text, db_path) from cursorDiskKV table."""
-        try:
-            con = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
-            cur = con.cursor()
-            # Check if table exists
-            cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='cursorDiskKV'")
-            if not cur.fetchone():
-                con.close()
-                return
-
-            cur.execute("SELECT key, value FROM cursorDiskKV WHERE key LIKE 'bubbleId:%'")
-        except sqlite3.DatabaseError as e:
-            logger.debug(f"Database error with {db}: {e}")
-            return
-
-        db_path_str = str(db)
-
-        for k, v in cur.fetchall():
-            try:
-                if v is None:
-                    continue
-
-                b = json.loads(v)
-            except Exception as e:
-                logger.debug(f"Failed to parse bubble JSON for key {k}: {e}")
-                continue
-
-            txt = (b.get("text") or b.get("richText") or "").strip()
-            if not txt:
-                continue
-            role = "user" if b.get("type") == 1 else "assistant"
-            composerId = k.split(":")[1]  # Format is bubbleId:composerId:bubbleId
-            yield composerId, role, txt, db_path_str
-
-        con.close()
-
-    def _iter_composer_data(self, db: pathlib.Path) -> Iterable[Tuple[str, dict, str]]:
-        """Yield (composerId, composerData, db_path) from cursorDiskKV table."""
-        try:
-            con = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
-            cur = con.cursor()
-            # Check if table exists
-            cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='cursorDiskKV'")
-            if not cur.fetchone():
-                con.close()
-                return
-
-            cur.execute("SELECT key, value FROM cursorDiskKV WHERE key LIKE 'composerData:%'")
-        except sqlite3.DatabaseError as e:
-            logger.debug(f"Database error with {db}: {e}")
-            return
-
-        db_path_str = str(db)
-
-        for k, v in cur.fetchall():
-            try:
-                if v is None:
-                    continue
-
-                composer_data = json.loads(v)
-                composer_id = k.split(":")[1]
-                yield composer_id, composer_data, db_path_str
-
-            except Exception as e:
-                logger.debug(f"Failed to parse composer data for key {k}: {e}")
-                continue
-
-        con.close()
-
-    def _extract_project_info(self, db: pathlib.Path) -> ProjectInfo:
-        """Extract project information from workspace database."""
-        try:
-            con = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
-            cur = con.cursor()
-
-            # Get file paths from history entries
-            ents = self._load_json_from_db(cur, "ItemTable", "history.entries") or []
-
-            # Extract file paths from history entries
-            paths = []
-            for e in ents:
-                resource = e.get("editor", {}).get("resource", "")
-                if resource and resource.startswith("file:///"):
-                    paths.append(resource[len("file:///"):])
-
-            # If we found file paths, extract the project name
-            if paths:
-                common_prefix = os.path.commonprefix(paths)
-                last_separator_index = common_prefix.rfind('/')
-                if last_separator_index > 0:
-                    project_root = common_prefix[:last_separator_index]
-                    project_name = pathlib.Path(project_root).name
-                    con.close()
-                    return ProjectInfo(name=project_name, root_path="/" + project_root.lstrip('/'))
-
-            con.close()
-        except Exception as e:
-            logger.debug(f"Error extracting project info from {db}: {e}")
-
-        return ProjectInfo(name="(unknown)", root_path="(unknown)")
-
-    def _iter_workspaces(self) -> Iterable[Tuple[str, pathlib.Path]]:
-        """Yield (workspace_id, db_path) for each workspace."""
-        base = self.storage_root
-        if not base:
-            return
-
-        ws_root = base / "User" / "workspaceStorage"
-        if not ws_root.exists():
-            return
-
-        for folder in ws_root.iterdir():
-            db = folder / "state.vscdb"
-            if db.exists():
-                yield folder.name, db
-
-    def _get_global_storage_path(self) -> Optional[pathlib.Path]:
-        """Return path to the global storage state.vscdb."""
-        base = self.storage_root
-        if not base:
             return None
 
+    def find_all_database_files(self) -> List[pathlib.Path]:
+        """Find all vscdb and sqlite database files.
+        
+        Returns:
+            List of paths to all database files (workspace and global storage).
+        """
+        base = self.get_storage_root()
+        if not base or not base.exists():
+            return []
+
+        db_files: List[pathlib.Path] = []
+
+        # Find workspace databases
+        ws_root = base / "User" / "workspaceStorage"
+        if ws_root.exists():
+            for folder in ws_root.iterdir():
+                db = folder / "state.vscdb"
+                if db.exists():
+                    db_files.append(db)
+
+        # Find global storage database
         global_db = base / "User" / "globalStorage" / "state.vscdb"
         if global_db.exists():
-            return global_db
+            db_files.append(global_db)
 
-        # Legacy paths
+        # Check legacy paths
         g_dirs = [
             base / "User" / "globalStorage" / "cursor.cursor",
             base / "User" / "globalStorage" / "cursor"
         ]
         for d in g_dirs:
             if d.exists():
-                for file in d.glob("*.sqlite"):
-                    return file
+                db_files.extend(d.glob("*.sqlite"))
 
-        return None
+        return sorted(db_files)
 
-    def find_chat_sessions(self) -> List[ChatSession]:
-        """Find and extract all Cursor chat sessions."""
-        # Maps to track workspaces, composers, and sessions
-        ws_proj: Dict[str, ProjectInfo] = {}
-        comp_meta: Dict[str, Dict[str, Any]] = {}
-        comp2ws: Dict[str, str] = {}
-        sessions: Dict[str, Dict[str, Any]] = defaultdict(lambda: {"messages": []})
+    def _extract_database_data(self, db_path: pathlib.Path) -> Dict[str, Any]:
+        """Extract all relevant data from a database file.
+        
+        Args:
+            db_path: Path to the database file.
+            
+        Returns:
+            Dictionary containing all extracted data from the database.
+        """
+        data: Dict[str, Any] = {
+            "tables": {}
+        }
 
-        # 1. Process workspace DBs first
-        logger.debug("Processing workspace databases...")
-        for ws_id, db in self._iter_workspaces():
-            logger.debug(f"Processing workspace {ws_id} - {db}")
-            ws_proj[ws_id] = self._extract_project_info(db)
+        try:
+            # Use read-only mode to avoid locking issues
+            con = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+            cur = con.cursor()
 
-            # Extract composer metadata
+            # Get all table names
+            cur.execute("SELECT name FROM sqlite_master WHERE type='table'")
+            tables = [row[0] for row in cur.fetchall()]
+
+            # Extract data from each table
+            for table_name in tables:
+                try:
+                    # Get table schema
+                    cur.execute(f"PRAGMA table_info({table_name})")
+                    columns = [row[1] for row in cur.fetchall()]
+
+                    # Get all rows from the table
+                    cur.execute(f"SELECT * FROM {table_name}")
+                    rows = cur.fetchall()
+
+                    # Convert rows to dictionaries
+                    table_data = []
+                    for row in rows:
+                        row_dict = {}
+                        for i, col_name in enumerate(columns):
+                            value = row[i]
+                            # Try to parse JSON values if they look like JSON
+                            if isinstance(value, str) and (value.startswith('{') or value.startswith('[')):
+                                try:
+                                    value = json.loads(value)
+                                except (json.JSONDecodeError, ValueError):
+                                    pass
+                            row_dict[col_name] = value
+                        table_data.append(row_dict)
+
+                    data["tables"][table_name] = {
+                        "columns": columns,
+                        "rows": table_data,
+                        "row_count": len(table_data)
+                    }
+                except Exception:
+                    # Skip tables that can't be read
+                    continue
+
+            con.close()
+        except Exception:
+            # Return empty data if database can't be read
+            pass
+
+        return data
+
+    def export_chats(self, output_path: pathlib.Path) -> Dict[str, Any]:
+        """Export all Cursor chat databases, merging them into a single JSON structure.
+        
+        Args:
+            output_path: Path to save the merged JSON file.
+            
+        Returns:
+            Dictionary containing the merged chat data.
+        """
+        db_files = self.find_all_database_files()
+        
+        if not db_files:
+            result = {"chats": []}
+            output_path.write_text(
+                json.dumps(result, ensure_ascii=False, indent=2),
+                encoding="utf-8"
+            )
+            return result
+
+        # Extract data from all database files
+        merged_chats: List[Dict[str, Any]] = []
+        
+        for db_file in db_files:
             try:
-                con = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
-                cur = con.cursor()
-                cd = self._load_json_from_db(cur, "ItemTable", "composer.composerData") or {}
-                for c in cd.get("allComposers", []):
-                    cid = c["composerId"]
-                    comp_meta[cid] = {
-                        "title": c.get("name", "(untitled)"),
-                        "createdAt": c.get("createdAt"),
-                        "lastUpdatedAt": c.get("lastUpdatedAt")
-                    }
-                    comp2ws[cid] = ws_id
-
-                # Extract messages from composer data in ItemTable
-                for comp in cd.get("allComposers", []):
-                    cid = comp.get("composerId")
-                    messages = comp.get("messages", [])
-                    for msg in messages:
-                        role = msg.get("role", "")
-                        content = msg.get("content", "")
-                        if role and content:
-                            sessions[cid]["messages"].append({"role": role, "content": content})
-                            if "db_path" not in sessions[cid]:
-                                sessions[cid]["db_path"] = str(db)
-
-                con.close()
-            except Exception as e:
-                logger.debug(f"Error processing workspace {ws_id}: {e}")
-
-        # 2. Process global storage
-        global_db = self._get_global_storage_path()
-        if global_db:
-            logger.debug(f"Processing global storage: {global_db}")
-
-            # Extract bubbles from cursorDiskKV
-            for cid, role, text, db_path in self._iter_bubbles_from_disk_kv(global_db):
-                sessions[cid]["messages"].append({"role": role, "content": text})
-                if "db_path" not in sessions[cid]:
-                    sessions[cid]["db_path"] = db_path
-                if cid not in comp_meta:
-                    comp_meta[cid] = {"title": f"Chat {cid[:8]}", "createdAt": None, "lastUpdatedAt": None}
-                    comp2ws[cid] = "(global)"
-
-            # Extract composer data
-            for cid, data, db_path in self._iter_composer_data(global_db):
-                if cid not in comp_meta:
-                    created_at = data.get("createdAt")
-                    comp_meta[cid] = {
-                        "title": f"Chat {cid[:8]}",
-                        "createdAt": created_at,
-                        "lastUpdatedAt": created_at
-                    }
-                    comp2ws[cid] = "(global)"
-
-                if "db_path" not in sessions[cid]:
-                    sessions[cid]["db_path"] = db_path
-
-                # Extract conversation from composer data
-                conversation = data.get("conversation", [])
-                for msg in conversation:
-                    msg_type = msg.get("type")
-                    if msg_type is None:
-                        continue
-
-                    # Type 1 = user, Type 2 = assistant
-                    role = "user" if msg_type == 1 else "assistant"
-                    content = msg.get("text", "")
-                    if content and isinstance(content, str):
-                        sessions[cid]["messages"].append({"role": role, "content": content})
-
-        # 3. Build final list of ChatSession objects
-        results: List[ChatSession] = []
-        for cid, data in sessions.items():
-            if not data["messages"]:
+                # Extract raw data from the database
+                db_data = self._extract_database_data(db_file)
+                
+                # Add metadata about the source file
+                chat_entry = {
+                    "file_path": str(db_file),
+                    "file_name": db_file.name,
+                    "workspace_id": db_file.parent.name if db_file.parent.name != "globalStorage" else "(global)",
+                    "data": db_data
+                }
+                merged_chats.append(chat_entry)
+            except Exception:
+                # Skip files that can't be read/parsed
                 continue
 
-            ws_id = comp2ws.get(cid, "(unknown)")
-            project = ws_proj.get(ws_id, ProjectInfo(name="(unknown)", root_path="(unknown)"))
-            meta = comp_meta.get(cid, {"title": "(untitled)", "createdAt": None, "lastUpdatedAt": None})
-
-            # Convert messages to ChatMessage objects using the parser
-            messages = parse_cursor_messages(data["messages"])
-
-            # Format date
-            created_at = meta.get("createdAt")
-            if created_at and isinstance(created_at, (int, float)):
-                date = datetime.datetime.fromtimestamp(created_at / 1000).strftime("%Y-%m-%d %H:%M:%S")
-            else:
-                date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-            session = ChatSession(
-                project=project,
-                session_id=cid,
-                messages=messages,
-                date=date,
-                file_path=data.get("db_path", ""),
-                workspace_id=ws_id
-            )
-
-            results.append(session)
-
-        # Sort by last updated time if available
-        results.sort(
-            key=lambda s: comp_meta.get(s.session_id, {}).get("lastUpdatedAt") or 0,
-            reverse=True
+        result = {"chats": merged_chats, "total_count": len(merged_chats)}
+        
+        # Save to file
+        output_path.write_text(
+            json.dumps(result, ensure_ascii=False, indent=2),
+            encoding="utf-8"
         )
+        
+        return result
 
-        return results
 
-
-def extract_all_chats() -> List[Dict[str, Any]]:
-    """Legacy function for backwards compatibility."""
+def extract_all_chats() -> Dict[str, Any]:
+    """Find all Cursor chat database files and return merged data."""
     finder = CursorChatFinder()
-    return finder.extract_chats()
+    db_files = finder.find_all_database_files()
+    
+    merged_chats: List[Dict[str, Any]] = []
+    for db_file in db_files:
+        try:
+            db_data = finder._extract_database_data(db_file)
+            chat_entry = {
+                "file_path": str(db_file),
+                "file_name": db_file.name,
+                "workspace_id": db_file.parent.name if db_file.parent.name != "globalStorage" else "(global)",
+                "data": db_data
+            }
+            merged_chats.append(chat_entry)
+        except Exception:
+            continue
+    
+    return {"chats": merged_chats, "total_count": len(merged_chats)}
 
 
-def save_all_chats(output_path: pathlib.Path) -> List[Dict[str, Any]]:
-    """Legacy function for backwards compatibility."""
+def save_all_chats(output_path: pathlib.Path) -> Dict[str, Any]:
+    """Export and save all Cursor chats to a JSON file."""
     finder = CursorChatFinder()
-    return finder.save_to_file(output_path)
+    return finder.export_chats(output_path)
 
 
 if __name__ == "__main__":
@@ -347,5 +225,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     finder = CursorChatFinder()
-    chats = finder.save_to_file(args.out)
-    print(f"Extracted {len(chats)} chat sessions to {args.out}")
+    result = finder.export_chats(args.out)
+    print(f"Extracted {result['total_count']} chat database files to {args.out}")

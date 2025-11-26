@@ -1,48 +1,15 @@
-#!/usr/bin/env python3
-"""
-Find GitHub Copilot chat histories in VS Code workspaceStorage and export them.
-
-Info:
-GitHub Copilot Chat histories are stored per workspace—even if you didn't create one
-manually, VS Code will generate one for you automatically.
-
-Normally, you can transfer histories between workspaces (and machines) using the
-Chat: Export Chat… and Chat: Import Chat… commands. If you can't restore your
-previous workspace, however, you can still retrieve the JSON history files
-directly from VS Code's workspace root directory, workspaceStorage.
-
-The workspaceStorage directory is located at:
-
-    C:/Users/<username>/AppData/Roaming/Code/User/workspaceStorage on Windows;
-    /Users/<username>/Library/Application Support/Code/User/workspaceStorage on macOS.
-
-Inside workspaceStorage, each subfolder—named by a hash—corresponds to a workspace
-(including those automatically created by VS Code). To identify which is which,
-open a folder and inspect its workspace.json: it lists the associated project path.
-Note that a single project can have multiple workspace entries. Within the
-correct workspace folder, look for a chatSessions directory, where your Copilot
-Chat histories are saved as JSON files. You can copy those files elsewhere and
-then use Chat: Import Chat… to load them into another workspace.
-"""
-
 from __future__ import annotations
 
 import json
 import pathlib
 import platform
-import datetime
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
-from base_chat_finder import ChatFinder, ChatSession, ChatMessage, ProjectInfo
-from chat_message_parser import parse_copilot_messages
+"""This module exports Copilot chat JSON files as-is, merging multiple files."""
 
 
-class CopilotChatFinder(ChatFinder):
+class CopilotChatFinder:
     """Find and extract GitHub Copilot chat histories from VS Code."""
-
-    @property
-    def name(self) -> str:
-        return "Copilot"
 
     def get_storage_root(self) -> Optional[pathlib.Path]:
         """Return the path to VS Code's `workspaceStorage` directory.
@@ -72,114 +39,106 @@ class CopilotChatFinder(ChatFinder):
         # Return first candidate even if missing so caller can inspect
         return candidates[0] if candidates else None
 
-    def _extract_workspace_path_from_json(self, ws_json_path: pathlib.Path) -> Optional[str]:
-        """Extract a file system path from workspace.json if present.
-
-        Looks for strings starting with file:// or common keys that contain paths.
+    def find_all_chat_files(self) -> List[pathlib.Path]:
+        """Find all JSON chat session files in workspaceStorage.
+        
+        Returns:
+            List of paths to all JSON chat session files.
         """
-        try:
-            raw = json.loads(ws_json_path.read_text(encoding="utf-8"))
-        except Exception:
-            return None
-
-        def walk(obj) -> Optional[str]:
-            if isinstance(obj, str):
-                if obj.startswith("file://"):
-                    return obj.split("file://", 1)[1]
-                # sometimes paths may be plain strings
-                if obj.startswith("/") or (len(obj) > 1 and obj[1] == ':'):
-                    return obj
-                return None
-            if isinstance(obj, dict):
-                for v in obj.values():
-                    p = walk(v)
-                    if p:
-                        return p
-            if isinstance(obj, list):
-                for v in obj:
-                    p = walk(v)
-                    if p:
-                        return p
-            return None
-
-        return walk(raw)
-
-    def find_chat_sessions(self) -> List[ChatSession]:
-        """Scan workspaceStorage and return list of Copilot chat sessions."""
-        storage_root = self.storage_root
+        storage_root = self.get_storage_root()
         if not storage_root or not storage_root.exists():
             return []
 
-        results: List[ChatSession] = []
+        chat_files: List[pathlib.Path] = []
 
         for ws_dir in storage_root.iterdir():
             if not ws_dir.is_dir():
                 continue
-
-            # Extract project info from workspace.json
-            project_info = ProjectInfo(name="(unknown)", root_path="(unknown)")
-            workspace_json = ws_dir / "workspace.json"
-            if workspace_json.exists():
-                path_found = self._extract_workspace_path_from_json(workspace_json)
-                if path_found:
-                    project_info = ProjectInfo(
-                        name=pathlib.Path(path_found).name,
-                        root_path=path_found
-                    )
 
             # Look for chat sessions directory
             chat_dir = ws_dir / "chatSessions"
             if not chat_dir.exists() or not chat_dir.is_dir():
                 continue
 
-            # Process each JSON file in chatSessions
-            for jf in sorted(chat_dir.glob("*.json")):
-                try:
-                    raw = json.loads(jf.read_text(encoding="utf-8"))
-                except Exception:
-                    continue
+            # Collect all JSON files
+            chat_files.extend(sorted(chat_dir.glob("*.json")))
 
-                # Extract messages using the parser
-                # This will extract from both simple messages and detailed requests/responses
-                messages: List[ChatMessage] = parse_copilot_messages(raw)
+        return chat_files
 
-                session = ChatSession(
-                    project=project_info,
-                    session_id=jf.stem,
-                    messages=messages,
-                    date=datetime.datetime.fromtimestamp(jf.stat().st_mtime).strftime("%Y-%m-%d %H:%M:%S"),
-                    file_path=str(jf),
-                    workspace_id=ws_dir.name,
-                    raw_data=raw
-                )
+    def export_chats(self, output_path: pathlib.Path) -> Dict[str, Any]:
+        """Export all Copilot chat JSON files, merging them into a single JSON structure.
+        
+        Args:
+            output_path: Path to save the merged JSON file.
+            
+        Returns:
+            Dictionary containing the merged chat data.
+        """
+        chat_files = self.find_all_chat_files()
+        
+        if not chat_files:
+            result = {"chats": []}
+            output_path.write_text(
+                json.dumps(result, ensure_ascii=False, indent=2),
+                encoding="utf-8"
+            )
+            return result
 
-                results.append(session)
+        # Read all JSON files and merge them
+        merged_chats: List[Dict[str, Any]] = []
+        
+        for chat_file in chat_files:
+            try:
+                raw_data = json.loads(chat_file.read_text(encoding="utf-8"))
+                # Add metadata about the source file
+                chat_entry = {
+                    "file_path": str(chat_file),
+                    "file_name": chat_file.name,
+                    "workspace_id": chat_file.parent.parent.name,
+                    "data": raw_data
+                }
+                merged_chats.append(chat_entry)
+            except Exception:
+                # Skip files that can't be read/parsed
+                continue
 
-        return results
-
-    def extract_chats(self) -> List[dict]:
-        """Extract chats with copilot-specific raw data field name."""
-        sessions = self.find_chat_sessions()
-        chats = []
-        for session in sessions:
-            chat_dict = session.to_dict()
-            # Rename raw_data to copilot_raw for consistency with original format
-            if "raw_data" in chat_dict:
-                chat_dict["copilot_raw"] = chat_dict.pop("raw_data")
-            chats.append(chat_dict)
-        return chats
+        result = {"chats": merged_chats, "total_count": len(merged_chats)}
+        
+        # Save to file
+        output_path.write_text(
+            json.dumps(result, ensure_ascii=False, indent=2),
+            encoding="utf-8"
+        )
+        
+        return result
 
 
-def find_copilot_chats() -> List[dict]:
-    """Legacy function for backwards compatibility."""
+def find_copilot_chats() -> Dict[str, Any]:
+    """Find all Copilot chat files and return merged data."""
     finder = CopilotChatFinder()
-    return finder.extract_chats()
+    chat_files = finder.find_all_chat_files()
+    
+    merged_chats: List[Dict[str, Any]] = []
+    for chat_file in chat_files:
+        try:
+            raw_data = json.loads(chat_file.read_text(encoding="utf-8"))
+            chat_entry = {
+                "file_path": str(chat_file),
+                "file_name": chat_file.name,
+                "workspace_id": chat_file.parent.parent.name,
+                "data": raw_data
+            }
+            merged_chats.append(chat_entry)
+        except Exception:
+            continue
+    
+    return {"chats": merged_chats, "total_count": len(merged_chats)}
 
 
-def save_copilot_chats(output_path: pathlib.Path) -> List[dict]:
-    """Legacy function for backwards compatibility."""
+def save_copilot_chats(output_path: pathlib.Path) -> Dict[str, Any]:
+    """Export and save all Copilot chats to a JSON file."""
     finder = CopilotChatFinder()
-    return finder.save_to_file(output_path)
+    return finder.export_chats(output_path)
 
 
 if __name__ == "__main__":
@@ -190,5 +149,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     finder = CopilotChatFinder()
-    chats = finder.save_to_file(args.out)
-    print(f"Extracted {len(chats)} copilot chat sessions to {args.out}")
+    result = finder.export_chats(args.out)
+    print(f"Extracted {result['total_count']} copilot chat sessions to {args.out}")

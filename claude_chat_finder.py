@@ -21,19 +21,13 @@ from __future__ import annotations
 
 import json
 import pathlib
-import datetime
 from typing import List, Optional, Dict, Any
 
-from base_chat_finder import ChatFinder, ChatSession, ChatMessage, ProjectInfo
-from chat_message_parser import parse_claude_messages
+"""This module exports Claude chat JSON/JSONL files as-is, merging multiple files."""
 
 
-class ClaudeChatFinder(ChatFinder):
+class ClaudeChatFinder:
     """Find and extract Claude Code chat histories."""
-
-    @property
-    def name(self) -> str:
-        return "Claude"
 
     def get_storage_root(self) -> Optional[pathlib.Path]:
         """Return the path to Claude Code's `projects` directory.
@@ -57,7 +51,7 @@ class ClaudeChatFinder(ChatFinder):
         objects = []
         try:
             with file_path.open("r", encoding="utf-8") as f:
-                for line_num, line in enumerate(f, 1):
+                for line in f:
                     line = line.strip()
                     if not line:
                         continue
@@ -72,21 +66,17 @@ class ClaudeChatFinder(ChatFinder):
 
         return objects
 
-    def _extract_messages_from_transcript(self, transcript_objects: List[Dict[str, Any]]) -> List[ChatMessage]:
-        """Extract user and assistant messages from transcript objects.
-
-        Uses the Claude message parser to extract detailed message types including
-        thinking, tool usage, and code diffs.
+    def find_all_chat_files(self) -> List[pathlib.Path]:
+        """Find all JSONL and JSON chat files in ~/.claude/projects.
+        
+        Returns:
+            List of paths to all chat files (both .jsonl and .json).
         """
-        return parse_claude_messages(transcript_objects)
-
-    def find_chat_sessions(self) -> List[ChatSession]:
-        """Scan ~/.claude/projects and return list of Claude Code chat sessions."""
-        projects_root = self.storage_root
+        projects_root = self.get_storage_root()
         if not projects_root or not projects_root.exists():
             return []
 
-        results: List[ChatSession] = []
+        chat_files: List[pathlib.Path] = []
 
         for project_dir in projects_root.iterdir():
             if not project_dir.is_dir():
@@ -96,102 +86,106 @@ class ClaudeChatFinder(ChatFinder):
             if project_dir.name.startswith("."):
                 continue
 
-            project_info = ProjectInfo(
-                name=project_dir.name,
-                root_path=str(project_dir)
-            )
-
-            # Find all JSONL transcript files in the project directory
-            for transcript_file in project_dir.glob("*.jsonl"):
-                try:
-                    transcript_objects = self._parse_jsonl_file(transcript_file)
-                    if not transcript_objects:
-                        continue
-
-                    messages = self._extract_messages_from_transcript(transcript_objects)
-
-                    session = ChatSession(
-                        project=project_info,
-                        session_id=transcript_file.stem,
-                        messages=messages,
-                        date=datetime.datetime.fromtimestamp(
-                            transcript_file.stat().st_mtime
-                        ).strftime("%Y-%m-%d %H:%M:%S"),
-                        file_path=str(transcript_file),
-                        raw_data=transcript_objects
-                    )
-
-                    results.append(session)
-
-                except Exception:
-                    continue
+            # Find all JSONL transcript files
+            chat_files.extend(sorted(project_dir.glob("*.jsonl")))
 
             # Also check for plain JSON files that might contain chat data
             for json_file in project_dir.glob("*.json"):
                 # Skip cache files and metadata
                 if json_file.parent.name == ".cache" or json_file.name.startswith("."):
                     continue
+                chat_files.append(json_file)
 
-                try:
-                    raw = json.loads(json_file.read_text(encoding="utf-8"))
+        return sorted(chat_files)
 
-                    # Check if this looks like a chat session
-                    messages = []
-                    if isinstance(raw, dict):
-                        if "messages" in raw and isinstance(raw["messages"], list):
-                            for msg in raw["messages"]:
-                                if isinstance(msg, dict):
-                                    role = msg.get("role", "")
-                                    content = msg.get("content", "")
-                                    if role and content:
-                                        messages.append(ChatMessage(type=role, content=content))
-                        elif "transcript" in raw:
-                            messages = self._extract_messages_from_transcript([raw["transcript"]])
-                    elif isinstance(raw, list):
-                        messages = self._extract_messages_from_transcript(raw)
+    def export_chats(self, output_path: pathlib.Path) -> Dict[str, Any]:
+        """Export all Claude chat files, merging them into a single JSON structure.
+        
+        Args:
+            output_path: Path to save the merged JSON file.
+            
+        Returns:
+            Dictionary containing the merged chat data.
+        """
+        chat_files = self.find_all_chat_files()
+        
+        if not chat_files:
+            result = {"chats": []}
+            output_path.write_text(
+                json.dumps(result, ensure_ascii=False, indent=2),
+                encoding="utf-8"
+            )
+            return result
 
-                    if messages:
-                        session = ChatSession(
-                            project=project_info,
-                            session_id=json_file.stem,
-                            messages=messages,
-                            date=datetime.datetime.fromtimestamp(
-                                json_file.stat().st_mtime
-                            ).strftime("%Y-%m-%d %H:%M:%S"),
-                            file_path=str(json_file),
-                            raw_data=raw
-                        )
+        # Read all files and merge them
+        merged_chats: List[Dict[str, Any]] = []
+        
+        for chat_file in chat_files:
+            try:
+                if chat_file.suffix == ".jsonl":
+                    # Parse JSONL file (one JSON object per line)
+                    raw_data = self._parse_jsonl_file(chat_file)
+                    if not raw_data:
+                        continue
+                else:
+                    # Parse regular JSON file
+                    raw_data = json.loads(chat_file.read_text(encoding="utf-8"))
+                
+                # Add metadata about the source file
+                chat_entry = {
+                    "file_path": str(chat_file),
+                    "file_name": chat_file.name,
+                    "project_name": chat_file.parent.name,
+                    "data": raw_data
+                }
+                merged_chats.append(chat_entry)
+            except Exception:
+                # Skip files that can't be read/parsed
+                continue
 
-                        results.append(session)
+        result = {"chats": merged_chats, "total_count": len(merged_chats)}
+        
+        # Save to file
+        output_path.write_text(
+            json.dumps(result, ensure_ascii=False, indent=2),
+            encoding="utf-8"
+        )
+        
+        return result
 
-                except Exception:
+
+def find_claude_chats() -> Dict[str, Any]:
+    """Find all Claude chat files and return merged data."""
+    finder = ClaudeChatFinder()
+    chat_files = finder.find_all_chat_files()
+    
+    merged_chats: List[Dict[str, Any]] = []
+    for chat_file in chat_files:
+        try:
+            if chat_file.suffix == ".jsonl":
+                raw_data = finder._parse_jsonl_file(chat_file)
+                if not raw_data:
                     continue
+            else:
+                raw_data = json.loads(chat_file.read_text(encoding="utf-8"))
+            
+            chat_entry = {
+                "file_path": str(chat_file),
+                "file_name": chat_file.name,
+                "project_name": chat_file.parent.name,
+                "data": raw_data
+            }
+            merged_chats.append(chat_entry)
+        except Exception:
+            continue
+    
+    return {"chats": merged_chats, "total_count": len(merged_chats)}
 
-        return results
 
-    def extract_chats(self) -> List[dict]:
-        """Extract chats with claude-specific raw data field name."""
-        sessions = self.find_chat_sessions()
-        chats = []
-        for session in sessions:
-            chat_dict = session.to_dict()
-            # Rename raw_data to claude_raw for consistency with original format
-            if "raw_data" in chat_dict:
-                chat_dict["claude_raw"] = chat_dict.pop("raw_data")
-            chats.append(chat_dict)
-        return chats
-
-
-def find_claude_chats() -> List[dict]:
-    """Legacy function for backwards compatibility."""
+def save_claude_chats(output_path: pathlib.Path) -> Dict[str, Any]:
+    """Export and save all Claude chats to a JSON file."""
     finder = ClaudeChatFinder()
-    return finder.extract_chats()
-
-
-def save_claude_chats(output_path: pathlib.Path) -> List[dict]:
-    """Legacy function for backwards compatibility."""
-    finder = ClaudeChatFinder()
-    return finder.save_to_file(output_path)
+    return finder.export_chats(output_path)
 
 
 if __name__ == "__main__":
@@ -209,5 +203,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     finder = ClaudeChatFinder()
-    chats = finder.save_to_file(args.out)
-    print(f"Extracted {len(chats)} Claude Code chat sessions to {args.out}")
+    result = finder.export_chats(args.out)
+    print(f"Extracted {result['total_count']} Claude Code chat sessions to {args.out}")
