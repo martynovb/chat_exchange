@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Viewer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .upload-section {
+            padding: 30px;
+            text-align: center;
+            border-bottom: 1px solid #eee;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            margin: 20px 0;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .file-label {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #3498db;
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .file-label:hover {
+            background: #2980b9;
+        }
+
+        .file-name {
+            margin-top: 10px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .conversations-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border-bottom: 1px solid #eee;
+            padding: 10px;
+        }
+
+        .conversation-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            border-radius: 4px;
+            margin: 5px 0;
+            transition: background 0.2s;
+        }
+
+        .conversation-item:hover {
+            background: #f0f0f0;
+        }
+
+        .conversation-item.active {
+            background: #e3f2fd;
+            font-weight: bold;
+        }
+
+        .conversation-title {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .conversation-meta {
+            font-size: 12px;
+            color: #999;
+            margin-top: 4px;
+        }
+
+        .chat-container {
+            display: none;
+            padding: 20px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .chat-container.active {
+            display: block;
+        }
+
+        .chat-header {
+            padding: 15px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #eee;
+            margin-bottom: 20px;
+        }
+
+        .chat-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 8px;
+        }
+
+        .chat-metadata {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .message {
+            margin-bottom: 20px;
+            display: flex;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message.assistant {
+            justify-content: flex-start;
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            word-wrap: break-word;
+        }
+
+        .message.user .message-content {
+            background: #3498db;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.assistant .message-content {
+            background: #ecf0f1;
+            color: #333;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message-timestamp {
+            font-size: 11px;
+            color: #999;
+            margin-top: 4px;
+            text-align: right;
+        }
+
+        .message.user .message-timestamp {
+            text-align: right;
+        }
+
+        .message.assistant .message-timestamp {
+            text-align: left;
+        }
+
+        .tool-message {
+            background: #fff3cd;
+            border-left: 3px solid #ffc107;
+            padding: 10px;
+            margin-top: 5px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        .tool-name {
+            font-weight: bold;
+            color: #856404;
+            margin-bottom: 5px;
+        }
+
+        .tool-input, .tool-output {
+            margin-top: 5px;
+            font-size: 12px;
+        }
+
+        .tool-input {
+            color: #666;
+        }
+
+        .tool-output {
+            color: #333;
+            background: #fff;
+            padding: 8px;
+            border-radius: 4px;
+            margin-top: 8px;
+            white-space: pre-wrap;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .message-inputs {
+            font-size: 11px;
+            color: #666;
+            margin-top: 5px;
+            font-style: italic;
+        }
+
+        .error {
+            color: #e74c3c;
+            padding: 15px;
+            margin: 20px;
+            background: #fee;
+            border-radius: 4px;
+            border-left: 3px solid #e74c3c;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Chat Viewer</h1>
+        </div>
+
+        <div class="upload-section">
+            <div class="file-input-wrapper">
+                <input type="file" id="fileInput" class="file-input" accept=".json">
+                <label for="fileInput" class="file-label">Choose JSON File</label>
+            </div>
+            <div class="file-name" id="fileName"></div>
+        </div>
+
+        <div id="errorContainer"></div>
+
+        <div id="conversationsList" class="conversations-list" style="display: none;"></div>
+
+        <div id="chatContainer" class="chat-container"></div>
+    </div>
+
+    <script>
+        let conversations = [];
+        let currentConversationIndex = -1;
+
+        const fileInput = document.getElementById('fileInput');
+        const fileName = document.getElementById('fileName');
+        const errorContainer = document.getElementById('errorContainer');
+        const conversationsList = document.getElementById('conversationsList');
+        const chatContainer = document.getElementById('chatContainer');
+
+        fileInput.addEventListener('change', handleFileUpload);
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            fileName.textContent = `Selected: ${file.name}`;
+            errorContainer.innerHTML = '';
+            conversations = [];
+            currentConversationIndex = -1;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const jsonData = JSON.parse(e.target.result);
+                    
+                    if (!Array.isArray(jsonData)) {
+                        showError('JSON file must contain an array of conversations');
+                        return;
+                    }
+
+                    conversations = jsonData;
+                    displayConversationsList();
+                    
+                    if (conversations.length > 0) {
+                        displayConversation(0);
+                    }
+                } catch (error) {
+                    showError(`Error parsing JSON: ${error.message}`);
+                }
+            };
+
+            reader.onerror = function() {
+                showError('Error reading file');
+            };
+
+            reader.readAsText(file);
+        }
+
+        function showError(message) {
+            errorContainer.innerHTML = `<div class="error">${message}</div>`;
+        }
+
+        function displayConversationsList() {
+            if (conversations.length === 0) {
+                conversationsList.style.display = 'none';
+                return;
+            }
+
+            conversationsList.style.display = 'block';
+            conversationsList.innerHTML = '';
+
+            conversations.forEach((conv, index) => {
+                const item = document.createElement('div');
+                item.className = 'conversation-item';
+                if (index === currentConversationIndex) {
+                    item.classList.add('active');
+                }
+
+                const title = document.createElement('div');
+                title.className = 'conversation-title';
+                title.textContent = conv.title || `Conversation ${index + 1}`;
+
+                const meta = document.createElement('div');
+                meta.className = 'conversation-meta';
+                const metaText = [];
+                if (conv.metadata?.model) metaText.push(conv.metadata.model);
+                if (conv.createdAt) {
+                    const date = new Date(conv.createdAt);
+                    metaText.push(date.toLocaleDateString());
+                }
+                meta.textContent = metaText.join(' • ');
+
+                item.appendChild(title);
+                item.appendChild(meta);
+
+                item.addEventListener('click', () => displayConversation(index));
+                conversationsList.appendChild(item);
+            });
+        }
+
+        function displayConversation(index) {
+            if (index < 0 || index >= conversations.length) return;
+
+            currentConversationIndex = index;
+            const conversation = conversations[index];
+
+            // Update active state in list
+            displayConversationsList();
+
+            // Display chat
+            chatContainer.innerHTML = '';
+
+            const header = document.createElement('div');
+            header.className = 'chat-header';
+
+            const title = document.createElement('div');
+            title.className = 'chat-title';
+            title.textContent = conversation.title || 'Untitled Conversation';
+
+            const metadata = document.createElement('div');
+            metadata.className = 'chat-metadata';
+            const metaParts = [];
+            if (conversation.metadata?.model) metaParts.push(`Model: ${conversation.metadata.model}`);
+            if (conversation.metadata?.Project) metaParts.push(`Project: ${conversation.metadata.Project}`);
+            if (conversation.metadata?.chat_timezone) metaParts.push(`Timezone: ${conversation.metadata.chat_timezone}`);
+            if (conversation.createdAt) {
+                const date = new Date(conversation.createdAt);
+                metaParts.push(`Created: ${date.toLocaleString()}`);
+            }
+            metadata.textContent = metaParts.join(' • ');
+
+            header.appendChild(title);
+            header.appendChild(metadata);
+            chatContainer.appendChild(header);
+
+            // Display messages
+            if (!conversation.messages || conversation.messages.length === 0) {
+                const empty = document.createElement('div');
+                empty.className = 'empty-state';
+                empty.innerHTML = '<div class="empty-state-icon">💬</div><div>No messages in this conversation</div>';
+                chatContainer.appendChild(empty);
+            } else {
+                conversation.messages.forEach(message => {
+                    const messageDiv = createMessageElement(message);
+                    chatContainer.appendChild(messageDiv);
+                });
+            }
+
+            chatContainer.classList.add('active');
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function createMessageElement(message) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${message.role}`;
+
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+
+            if (message.type === 'tool') {
+                // Tool message
+                const toolDiv = document.createElement('div');
+                toolDiv.className = 'tool-message';
+
+                const toolName = document.createElement('div');
+                toolName.className = 'tool-name';
+                toolName.textContent = `🔧 ${message.content.toolName || 'Tool'}`;
+
+                toolDiv.appendChild(toolName);
+
+                if (message.content.toolInput) {
+                    const toolInput = document.createElement('div');
+                    toolInput.className = 'tool-input';
+                    toolInput.textContent = `Input: ${JSON.stringify(message.content.toolInput, null, 2)}`;
+                    toolDiv.appendChild(toolInput);
+                }
+
+                if (message.content.toolOutput) {
+                    const toolOutput = document.createElement('div');
+                    toolOutput.className = 'tool-output';
+                    toolOutput.textContent = typeof message.content.toolOutput === 'string' 
+                        ? message.content.toolOutput 
+                        : JSON.stringify(message.content.toolOutput, null, 2);
+                    toolDiv.appendChild(toolOutput);
+                }
+
+                contentDiv.appendChild(toolDiv);
+            } else {
+                // Text message
+                if (typeof message.content === 'string') {
+                    contentDiv.textContent = message.content;
+                } else {
+                    contentDiv.textContent = JSON.stringify(message.content, null, 2);
+                }
+
+                // Show inputs if present
+                if (message.inputs) {
+                    const inputsDiv = document.createElement('div');
+                    inputsDiv.className = 'message-inputs';
+                    inputsDiv.textContent = `Attachments: ${JSON.stringify(message.inputs)}`;
+                    contentDiv.appendChild(inputsDiv);
+                }
+            }
+
+            // Add timestamp
+            if (message.timestamp) {
+                const timestamp = document.createElement('div');
+                timestamp.className = 'message-timestamp';
+                const date = new Date(message.timestamp);
+                timestamp.textContent = date.toLocaleTimeString();
+                contentDiv.appendChild(timestamp);
+            }
+
+            messageDiv.appendChild(contentDiv);
+            return messageDiv;
+        }
+    </script>
+</body>
+</html>
