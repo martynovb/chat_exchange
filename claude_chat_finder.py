@@ -25,10 +25,12 @@ import time
 import datetime
 from typing import List, Optional, Dict, Any
 
+from base_chat_finder import BaseChatFinder
+
 """This module exports Claude chat JSON/JSONL files in a standardized format."""
 
 
-class ClaudeChatFinder:
+class ClaudeChatFinder(BaseChatFinder):
     """Find and extract Claude Code chat histories."""
 
     def get_storage_root(self) -> Optional[pathlib.Path]:
@@ -100,16 +102,65 @@ class ClaudeChatFinder:
 
         return sorted(chat_files)
 
-    def _get_timezone_offset(self) -> str:
-        """Get timezone offset string like 'UTC+4'."""
-        try:
-            # Get local timezone offset
-            offset_seconds = time.timezone if (time.daylight == 0) else time.altzone
-            offset_hours = abs(offset_seconds) // 3600
-            sign = '+' if offset_seconds <= 0 else '-'
-            return f"UTC{sign}{offset_hours}"
-        except Exception:
-            return "UTC+0"  # Default fallback
+    def _generate_chat_id(self, file_path_or_key: Any) -> str:
+        """Generate unique chat ID from file path or database key.
+        
+        Args:
+            file_path_or_key: File path (pathlib.Path) for Claude chats
+            
+        Returns:
+            Unique chat ID string.
+        """
+        pass
+
+    def _extract_metadata_lightweight(self, file_path_or_key: Any) -> Optional[Dict[str, Any]]:
+        """Extract minimal metadata without parsing full content.
+        
+        Args:
+            file_path_or_key: File path (pathlib.Path) to JSONL/JSON file
+            
+        Returns:
+            Dict with keys: id, title, date, file_path
+            Returns None if metadata cannot be extracted.
+        """
+        pass
+
+    def _parse_chat_full(self, file_path_or_key: Any) -> Optional[Dict[str, Any]]:
+        """Parse full chat content.
+        
+        Args:
+            file_path_or_key: File path (pathlib.Path) to JSONL/JSON file
+            
+        Returns:
+            Full chat dict with title, metadata, createdAt, messages.
+            Returns None if chat cannot be parsed.
+        """
+        pass
+
+    def get_chat_metadata_list(self) -> List[Dict[str, Any]]:
+        """Return list of chats with minimal metadata (title, date, file_path).
+        
+        Only reads enough to extract title and basic info.
+        Does not parse full message content.
+        
+        Returns:
+            List of dicts with keys: id, title, date, file_path
+        """
+        pass
+
+    def parse_chat_by_id(self, chat_id: str) -> Dict[str, Any]:
+        """Parse a specific chat into full format.
+        
+        Args:
+            chat_id: Unique chat ID returned by get_chat_metadata_list()
+            
+        Returns:
+            Full chat dict with title, metadata, createdAt, messages
+            
+        Raises:
+            ValueError: If chat_id is not found
+        """
+        pass
 
     def _parse_iso_timestamp(self, timestamp_str: str) -> Optional[datetime.datetime]:
         """Parse ISO timestamp string to datetime object."""
@@ -395,7 +446,8 @@ class ClaudeChatFinder:
 def find_claude_chats() -> List[Dict[str, Any]]:
     """Find all Claude chat files and return transformed data."""
     finder = ClaudeChatFinder()
-    return finder.export_chats(pathlib.Path("claude_chats.json"))
+    output_path = finder._get_default_output_path("claude_chats.json")
+    return finder.export_chats(output_path)
 
 
 def save_claude_chats(output_path: pathlib.Path) -> List[Dict[str, Any]]:
@@ -413,11 +465,19 @@ if __name__ == "__main__":
     parser.add_argument(
         "--out",
         type=pathlib.Path,
-        default=pathlib.Path("claude_chats.json"),
-        help="Output JSON file"
+        default=None,
+        help="Output JSON file (default: result/claude_chats.json)"
     )
     args = parser.parse_args()
 
     finder = ClaudeChatFinder()
+    
+    # Default to result folder if not specified
+    if args.out is None:
+        args.out = finder._get_default_output_path("claude_chats.json")
+    else:
+        # Ensure parent directory exists
+        finder._ensure_output_dir(args.out)
+
     result = finder.export_chats(args.out)
     print(f"Extracted {len(result)} Claude Code chat sessions to {args.out}")

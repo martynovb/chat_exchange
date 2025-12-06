@@ -14,8 +14,10 @@ import argparse
 import pathlib
 import time
 from collections import defaultdict
-from typing import Dict, Any, Iterable, List
+from typing import Dict, Any, Iterable, List, Optional
 from pathlib import Path
+
+from base_chat_finder import BaseChatFinder
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, 
@@ -23,7 +25,113 @@ logging.basicConfig(level=logging.INFO,
 logger = logging.getLogger(__name__)
 
 ################################################################################
-# Cursor storage roots
+# CursorChatFinder class
+################################################################################
+class CursorChatFinder(BaseChatFinder):
+    """Find and extract Cursor chat histories from SQLite databases."""
+    
+    def __init__(self):
+        """Initialize the Cursor chat finder."""
+        super().__init__()
+    
+    def get_storage_root(self) -> Optional[pathlib.Path]:
+        """Return the path to Cursor's storage directory.
+        
+        Returns:
+            Path to Cursor storage directory.
+        """
+        h = pathlib.Path.home()
+        s = platform.system()
+        if s == "Darwin":
+            return h / "Library" / "Application Support" / "Cursor"
+        if s == "Windows":
+            return h / "AppData" / "Roaming" / "Cursor"
+        if s == "Linux":
+            return h / ".config" / "Cursor"
+        return None
+    
+    def find_all_chat_files(self) -> List[Any]:
+        """Find all chat database files and composer IDs.
+        
+        Returns:
+            List of tuples (composer_id, db_path) or similar identifiers.
+        """
+        pass
+    
+    def _generate_chat_id(self, file_path_or_key: Any) -> str:
+        """Generate unique chat ID from composer ID or database key.
+        
+        Args:
+            file_path_or_key: Composer ID (str) or tuple (composer_id, db_path)
+            
+        Returns:
+            Unique chat ID string.
+        """
+        pass
+    
+    def _extract_metadata_lightweight(self, file_path_or_key: Any) -> Optional[Dict[str, Any]]:
+        """Extract minimal metadata without parsing full content.
+        
+        Args:
+            file_path_or_key: Composer ID (str) or tuple (composer_id, db_path)
+            
+        Returns:
+            Dict with keys: id, title, date, file_path
+            Returns None if metadata cannot be extracted.
+        """
+        pass
+    
+    def _parse_chat_full(self, file_path_or_key: Any) -> Optional[Dict[str, Any]]:
+        """Parse full chat content.
+        
+        Args:
+            file_path_or_key: Composer ID (str) or tuple (composer_id, db_path)
+            
+        Returns:
+            Full chat dict with title, metadata, createdAt, messages.
+            Returns None if chat cannot be parsed.
+        """
+        pass
+    
+    def get_chat_metadata_list(self) -> List[Dict[str, Any]]:
+        """Return list of chats with minimal metadata (title, date, file_path).
+        
+        Only reads enough to extract title and basic info.
+        Does not parse full message content.
+        
+        Returns:
+            List of dicts with keys: id, title, date, file_path
+        """
+        pass
+    
+    def parse_chat_by_id(self, chat_id: str) -> Dict[str, Any]:
+        """Parse a specific chat into full format.
+        
+        Args:
+            chat_id: Unique chat ID returned by get_chat_metadata_list()
+            
+        Returns:
+            Full chat dict with title, metadata, createdAt, messages
+            
+        Raises:
+            ValueError: If chat_id is not found
+        """
+        pass
+    
+    def extract_chats(self) -> list[Dict[str, Any]]:
+        """Extract all chats from Cursor storage.
+        
+        Returns:
+            List of chat dictionaries.
+        """
+        pass
+    
+    def export_chats_to_json(self, output_file: str = None):
+        """Extract all chats and export them to JSON file."""
+        pass
+
+################################################################################
+# Cursor storage roots (backward compatibility)
 ################################################################################
 def cursor_root() -> pathlib.Path:
     h = pathlib.Path.home()
@@ -718,9 +826,21 @@ def transform_chat_to_export_format(chat: Dict[str, Any]) -> Dict[str, Any]:
         "messages": transformed_messages
     }
 
-def export_chats_to_json(output_file: str = "cursor_chats_export.json"):
+def export_chats_to_json(output_file: str = None):
     """Extract all chats and export them to JSON file."""
     try:
+        # Use base class methods for result folder logic
+        finder = CursorChatFinder()
+        
+        # Default to result folder if not specified
+        if output_file is None:
+            output_path = finder._get_default_output_path("cursor_chats_export.json")
+            output_file = str(output_path)
+        else:
+            # Ensure parent directory exists
+            output_path = pathlib.Path(output_file)
+            finder._ensure_output_dir(output_path)
+        
         logger.info("Starting chat extraction...")
         chats = extract_chats()
         logger.info(f"Extracted {len(chats)} chat sessions")
@@ -757,8 +877,8 @@ def export_chats_to_json(output_file: str = "cursor_chats_export.json"):
 ################################################################################
 def main():
     parser = argparse.ArgumentParser(description='Export Cursor chat data to JSON')
-    parser.add_argument('-o', '--output', type=str, default='cursor_chats_export.json',
-                       help='Output JSON file path (default: cursor_chats_export.json)')
+    parser.add_argument('-o', '--output', type=str, default=None,
+                       help='Output JSON file path (default: result/cursor_chats_export.json)')
     parser.add_argument('--debug', action='store_true', help='Enable debug logging')
     args = parser.parse_args()
     

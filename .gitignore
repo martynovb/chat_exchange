@@ -190,3 +190,7 @@ frontend/node_modules/*
 .idea/modules.xml
 .idea/vcs.xml
 .idea/caches/deviceStreaming.xml
+
+# Result folder - ignore exported chat files but keep directory
+result/*.json
+!result/.gitkeep

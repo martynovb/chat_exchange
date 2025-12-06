@@ -8,10 +8,12 @@ import time
 import re
 from typing import List, Optional, Dict, Any
 
+from base_chat_finder import BaseChatFinder
+
 """This module exports Copilot chat JSON files in the new standardized format."""
 
 
-class CopilotChatFinder:
+class CopilotChatFinder(BaseChatFinder):
     """Find and extract GitHub Copilot chat histories from VS Code."""
 
     def get_storage_root(self) -> Optional[pathlib.Path]:
@@ -42,16 +44,65 @@ class CopilotChatFinder:
         # Return first candidate even if missing so caller can inspect
         return candidates[0] if candidates else None
 
-    def _get_timezone_offset(self) -> str:
-        """Get timezone offset string like 'UTC+4'."""
-        try:
-            # Get local timezone offset
-            offset_seconds = time.timezone if (time.daylight == 0) else time.altzone
-            offset_hours = abs(offset_seconds) // 3600
-            sign = '+' if offset_seconds <= 0 else '-'
-            return f"UTC{sign}{offset_hours}"
-        except Exception:
-            return "UTC+0"  # Default fallback
+    def _generate_chat_id(self, file_path_or_key: Any) -> str:
+        """Generate unique chat ID from file path or database key.
+        
+        Args:
+            file_path_or_key: File path (pathlib.Path) for Copilot chats
+            
+        Returns:
+            Unique chat ID string.
+        """
+        pass
+
+    def _extract_metadata_lightweight(self, file_path_or_key: Any) -> Optional[Dict[str, Any]]:
+        """Extract minimal metadata without parsing full content.
+        
+        Args:
+            file_path_or_key: File path (pathlib.Path) to JSON chat file
+            
+        Returns:
+            Dict with keys: id, title, date, file_path
+            Returns None if metadata cannot be extracted.
+        """
+        pass
+
+    def _parse_chat_full(self, file_path_or_key: Any) -> Optional[Dict[str, Any]]:
+        """Parse full chat content.
+        
+        Args:
+            file_path_or_key: File path (pathlib.Path) to JSON chat file
+            
+        Returns:
+            Full chat dict with title, metadata, createdAt, messages.
+            Returns None if chat cannot be parsed.
+        """
+        pass
+
+    def get_chat_metadata_list(self) -> List[Dict[str, Any]]:
+        """Return list of chats with minimal metadata (title, date, file_path).
+        
+        Only reads enough to extract title and basic info.
+        Does not parse full message content.
+        
+        Returns:
+            List of dicts with keys: id, title, date, file_path
+        """
+        pass
+
+    def parse_chat_by_id(self, chat_id: str) -> Dict[str, Any]:
+        """Parse a specific chat into full format.
+        
+        Args:
+            chat_id: Unique chat ID returned by get_chat_metadata_list()
+            
+        Returns:
+            Full chat dict with title, metadata, createdAt, messages
+            
+        Raises:
+            ValueError: If chat_id is not found
+        """
+        pass
 
     def _timestamp_ms_to_iso(self, timestamp_ms: Optional[int]) -> str:
         """Convert milliseconds timestamp to ISO format string."""
@@ -145,7 +196,7 @@ class CopilotChatFinder:
         """Convert inlineReference to markdown file reference format."""
         file_path = self._extract_file_path_from_inline_reference(inline_ref)
         if file_path:
-            return f"```{file_path}```"
+            return f"`{file_path}`"
         
         # If no file path, try to use name
         name = inline_ref.get("name", "")
@@ -530,7 +581,8 @@ class CopilotChatFinder:
 def find_copilot_chats() -> List[Dict[str, Any]]:
     """Find all Copilot chat files and return transformed data."""
     finder = CopilotChatFinder()
-    return finder.export_chats(pathlib.Path("copilot_chats.json"))
+    output_path = finder._get_default_output_path("copilot_chats.json")
+    return finder.export_chats(output_path)
 
 
 def save_copilot_chats(output_path: pathlib.Path) -> List[Dict[str, Any]]:
@@ -543,9 +595,17 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="Extract GitHub Copilot chatSessions from VS Code workspaceStorage")
-    parser.add_argument("--out", type=pathlib.Path, default=pathlib.Path("copilot_chats.json"), help="Output JSON file")
+    parser.add_argument("--out", type=pathlib.Path, default=None, help="Output JSON file (default: result/copilot_chats.json)")
     args = parser.parse_args()
 
     finder = CopilotChatFinder()
+    
+    # Default to result folder if not specified
+    if args.out is None:
+        args.out = finder._get_default_output_path("copilot_chats.json")
+    else:
+        # Ensure parent directory exists
+        finder._ensure_output_dir(args.out)
+
     result = finder.export_chats(args.out)
     print(f"Extracted {len(result)} copilot chat sessions to {args.out}")
