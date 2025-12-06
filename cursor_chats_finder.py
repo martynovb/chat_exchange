@@ -151,8 +151,20 @@ class CursorChatFinder(BaseChatFinder):
         composer_id = file_path_or_key[0]
         db_path = file_path_or_key[1]
         
-        # Create unique key from composer_id and db_path
-        unique_key = f"{composer_id}:{db_path}"
+        # Normalize the path to ensure consistent ID generation across different calls
+        # This handles Windows path case sensitivity and separator differences
+        try:
+            path_obj = pathlib.Path(db_path)
+            # Resolve to absolute path (normalizes case on Windows, resolves symlinks)
+            # This ensures the same file always produces the same normalized path string
+            db_path_normalized = str(path_obj.resolve())
+        except (OSError, ValueError, TypeError):
+            # If path resolution fails (e.g., path doesn't exist), normalize separators
+            # This should rarely happen since we only process existing database files
+            db_path_normalized = str(pathlib.Path(db_path)).replace('\\', '/')
+        
+        # Create unique key from composer_id and normalized db_path
+        unique_key = f"{composer_id}:{db_path_normalized}"
         
         return self._generate_unique_id(unique_key)
     
@@ -269,35 +281,134 @@ class CursorChatFinder(BaseChatFinder):
                 return None
             
             # Extract messages for this composer
+            # Check ALL possible sources regardless of workspace type
             messages = []
             
-            # Try to get messages from ItemTable (workspace)
-            if workspace_id != "(global)":
-                for cid, role, text, _ in iter_chat_from_item_table(db_path):
+            # 1. Try to get messages from ItemTable (workspace chats)
+            try:
+                for bubble_data in iter_chat_from_item_table(db_path):
+                    cid = bubble_data["composerId"]
                     if cid == composer_id:
-                        messages.append({"role": role, "content": text})
+                        role = bubble_data["role"]
+                        text = bubble_data["text"]
+                        tool_data = bubble_data["tool_data"]
+                        timestamp = bubble_data.get("timestamp")
+                        
+                        if tool_data:
+                            messages.append({
+                                "role": role,
+                                "type": "tool",
+                                "content": tool_data,
+                                "_timestamp": timestamp
+                            })
+                        
+                        if text:
+                            messages.append({
+                                "role": role,
+                                "type": "text",
+                                "content": text,
+                                "_timestamp": timestamp
+                            })
+            except Exception as e:
+                logger.debug(f"Error iterating ItemTable: {e}")
             
-            # Try to get messages from cursorDiskKV (global)
-            if workspace_id == "(global)":
-                for cid, role, text, _ in iter_bubbles_from_disk_kv(db_path):
+            # 2. Try to get messages from cursorDiskKV bubbles (global chats, but check for all)
+            try:
+                for bubble_data in iter_bubbles_from_disk_kv(db_path):
+                    cid = bubble_data["composerId"]
                     if cid == composer_id:
-                        messages.append({"role": role, "content": text})
-                
-                # Also try composer data
+                        role = bubble_data["role"]
+                        text = bubble_data["text"]
+                        tool_data = bubble_data["tool_data"]
+                        timestamp = bubble_data.get("timestamp")
+                        
+                        if tool_data:
+                            messages.append({
+                                "role": role,
+                                "type": "tool",
+                                "content": tool_data,
+                                "_timestamp": timestamp
+                            })
+                        
+                        if text:
+                            messages.append({
+                                "role": role,
+                                "type": "text",
+                                "content": text,
+                                "_timestamp": timestamp
+                            })
+            except Exception as e:
+                logger.debug(f"Error iterating cursorDiskKV bubbles: {e}")
+            
+            # 3. Try composer data from cursorDiskKV
+            try:
                 for cid, data, _ in iter_composer_data(db_path):
                     if cid == composer_id:
+                        # Extract conversation from composer data
                         conversation = data.get("conversation", [])
                         for msg in conversation:
                             msg_type = msg.get("type")
                             if msg_type is None:
                                 continue
+                            
+                            # Type 1 = user, Type 2 = assistant
                             role = "user" if msg_type == 1 else "assistant"
                             content = msg.get("text", "")
+                            
+                            # Check for tool data
+                            tool_info = extract_tool_info(msg)
+                            
+                            if tool_info:
+                                messages.append({
+                                    "role": role,
+                                    "type": "tool",
+                                    "content": tool_info,
+                                    "_timestamp": None
+                                })
+                            
                             if content and isinstance(content, str):
-                                messages.append({"role": role, "content": content})
+                                messages.append({
+                                    "role": role,
+                                    "type": "text",
+                                    "content": content,
+                                    "_timestamp": None
+                                })
+            except Exception as e:
+                logger.debug(f"Error iterating composer data: {e}")
             
-            if not messages:
-                return None
+            # 4. Also check composer data directly from ItemTable (for workspace chats)
+            try:
+                con = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+                cur = con.cursor()
+                composer_data = j(cur, "ItemTable", "composer.composerData")
+                if composer_data:
+                    for comp in composer_data.get("allComposers", []):
+                        comp_id = comp.get("composerId")
+                        if comp_id == composer_id:
+                            comp_messages = comp.get("messages", [])
+                            for msg in comp_messages:
+                                msg_role = msg.get("role", "")
+                                msg_content = msg.get("content", "")
+                                if msg_content:
+                                    messages.append({
+                                        "role": msg_role,
+                                        "type": "text",
+                                        "content": str(msg_content).strip(),
+                                        "_timestamp": None
+                                    })
+                con.close()
+            except Exception as e:
+                logger.debug(f"Error checking ItemTable composer data: {e}")
+            
+            # Sort messages by timestamp
+            messages.sort(key=lambda m: m.get("_timestamp") or 0)
+            # Remove internal timestamp after sorting
+            for msg in messages:
+                if "_timestamp" in msg:
+                    del msg["_timestamp"]
+            
+            # Allow chats with no messages - they might have metadata only
+            # Return empty messages array instead of None
             
             # Get project info
             project_name = "Unknown Project"
@@ -344,6 +455,14 @@ class CursorChatFinder(BaseChatFinder):
                 con.close()
             except Exception:
                 pass
+            
+            
+            # Sort messages by timestamp
+            messages.sort(key=lambda m: m.get("_timestamp") or 0)
+            # Remove internal timestamp after sorting
+            for msg in messages:
+                if "_timestamp" in msg:
+                    del msg["_timestamp"]
             
             # Build chat dict in the format expected by transform_chat_to_export_format
             chat_dict = {
@@ -401,8 +520,100 @@ def j(cur: sqlite3.Cursor, table: str, key: str):
             logger.debug(f"Failed to parse JSON for {key}: {e}")
     return None
 
-def iter_bubbles_from_disk_kv(db: pathlib.Path) -> Iterable[tuple[str,str,str,str]]:
-    """Yield (composerId, role, text, db_path) from cursorDiskKV table."""
+def extract_text_from_richtext(richtext):
+    """Extract plain text from Lexical editor format (richText)."""
+    if isinstance(richtext, str):
+        try:
+            # Try to parse as JSON
+            richtext = json.loads(richtext)
+        except (json.JSONDecodeError, ValueError):
+            # If not JSON, return as-is
+            return richtext
+    
+    if isinstance(richtext, dict):
+        # Lexical editor format - extract text from root
+        root = richtext.get("root", {})
+        if isinstance(root, dict):
+            children = root.get("children", [])
+            text_parts = []
+            for child in children:
+                if isinstance(child, dict):
+                    text = child.get("text", "")
+                    if text:
+                        text_parts.append(text)
+                    # Also check nested children
+                    nested_children = child.get("children", [])
+                    for nested in nested_children:
+                        if isinstance(nested, dict):
+                            nested_text = nested.get("text", "")
+                            if nested_text:
+                                text_parts.append(nested_text)
+            return "\n".join(text_parts)
+    
+    return str(richtext) if richtext else ""
+
+def extract_tool_info(bubble):
+    """Extract tool usage information from a bubble.
+    
+    Returns dict with toolName, toolInput, toolOutput if tool usage is found, None otherwise.
+    """
+    # Check toolFormerData first (primary location for tool usage)
+    tool_data = bubble.get("toolFormerData")
+    if tool_data and isinstance(tool_data, dict):
+        tool_name = tool_data.get("name", "")
+        if tool_name:
+            # Extract tool input
+            tool_input = {}
+            params = tool_data.get("params")
+            raw_args = tool_data.get("rawArgs")
+            
+            if params:
+                if isinstance(params, str):
+                    try:
+                        tool_input = json.loads(params)
+                    except (json.JSONDecodeError, ValueError):
+                        tool_input = {"raw": params}
+                elif isinstance(params, dict):
+                    tool_input = params
+            elif raw_args:
+                if isinstance(raw_args, str):
+                    try:
+                        tool_input = json.loads(raw_args)
+                    except (json.JSONDecodeError, ValueError):
+                        tool_input = {"raw": raw_args}
+                elif isinstance(raw_args, dict):
+                    tool_input = raw_args
+            
+            # Extract tool output
+            tool_output = tool_data.get("result", "")
+            if isinstance(tool_output, dict):
+                tool_output = json.dumps(tool_output, indent=2)
+            elif not isinstance(tool_output, str):
+                tool_output = str(tool_output)
+            
+            return {
+                "toolName": tool_name,
+                "toolInput": tool_input,
+                "toolOutput": tool_output
+            }
+    
+    # Check for legacy tool fields
+    if bubble.get("tool"):
+        tool_name = bubble.get("toolName") or bubble.get("tool", "")
+        tool_input = bubble.get("toolInput") or bubble.get("tool_input", {})
+        tool_output = bubble.get("toolOutput") or bubble.get("tool_output") or bubble.get("tool_response", "")
+        
+        if tool_name:
+            return {
+                "toolName": tool_name,
+                "toolInput": tool_input if isinstance(tool_input, dict) else {"raw": str(tool_input)},
+                "toolOutput": str(tool_output) if tool_output else ""
+            }
+    
+    return None
+
+def iter_bubbles_from_disk_kv(db: pathlib.Path) -> Iterable[Dict[str, Any]]:
+    """Yield message dicts with (composerId, role, content, type, tool_data, timestamp, db_path) from cursorDiskKV table."""
     try:
         con = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
         cur = con.cursor()
@@ -418,6 +629,7 @@ def iter_bubbles_from_disk_kv(db: pathlib.Path) -> Iterable[tuple[str,str,str,st
         return
     
     db_path_str = str(db)
+    bubbles = []
     
     for k, v in cur.fetchall():
         try:
@@ -429,19 +641,46 @@ def iter_bubbles_from_disk_kv(db: pathlib.Path) -> Iterable[tuple[str,str,str,st
             logger.debug(f"Failed to parse bubble JSON for key {k}: {e}")
             continue
         
-        txt = (b.get("text") or b.get("richText") or "").strip()
-        if not txt:         continue
-        role = "user" if b.get("type") == 1 else "assistant"
         composerId = k.split(":")[1]  # Format is bubbleId:composerId:bubbleId
-        yield composerId, role, txt, db_path_str
+        role = "user" if b.get("type") == 1 else "assistant"
+        timestamp = b.get("createdAt")
+        
+        # Extract text content
+        text = b.get("text", "")
+        if not text and b.get("richText"):
+            text = extract_text_from_richtext(b.get("richText"))
+        
+        # Extract tool information
+        tool_info = extract_tool_info(b)
+        
+        # Skip if no text and no tool data
+        if not text and not tool_info:
+            continue
+        
+        bubbles.append({
+            "composerId": composerId,
+            "role": role,
+            "text": text.strip() if text else "",
+            "tool_data": tool_info,
+            "timestamp": timestamp,
+            "db_path": db_path_str
+        })
+    
+    # Sort by timestamp to preserve chronological order
+    bubbles.sort(key=lambda x: x.get("timestamp") or 0)
+    
+    for bubble in bubbles:
+        yield bubble
     
     con.close()
 
-def iter_chat_from_item_table(db: pathlib.Path) -> Iterable[tuple[str,str,str,str]]:
-    """Yield (composerId, role, text, db_path) from ItemTable."""
+def iter_chat_from_item_table(db: pathlib.Path) -> Iterable[Dict[str, Any]]:
+    """Yield message dicts with (composerId, role, content, type, tool_data, timestamp, db_path) from ItemTable."""
     try:
         con = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
         cur = con.cursor()
+        
+        bubbles = []
         
         # Try to get chat data from workbench.panel.aichat.view.aichat.chatdata
         chat_data = j(cur, "ItemTable", "workbench.panel.aichat.view.aichat.chatdata")
@@ -459,10 +698,27 @@ def iter_chat_from_item_table(db: pathlib.Path) -> Iterable[tuple[str,str,str,st
                         text = bubble["text"]
                     elif "content" in bubble:
                         text = bubble["content"]
+                    elif "richText" in bubble:
+                        text = extract_text_from_richtext(bubble["richText"])
                     
-                    if text and isinstance(text, str):
-                        role = "user" if bubble_type == "user" else "assistant"
-                        yield tab_id, role, text, str(db)
+                    # Extract tool information
+                    tool_info = extract_tool_info(bubble)
+                    
+                    # Skip if no text and no tool data
+                    if not text and not tool_info:
+                        continue
+                    
+                    role = "user" if bubble_type == "user" else "assistant"
+                    timestamp = bubble.get("createdAt")
+                    
+                    bubbles.append({
+                        "composerId": tab_id,
+                        "role": role,
+                        "text": text.strip() if text else "",
+                        "tool_data": tool_info,
+                        "timestamp": timestamp,
+                        "db_path": str(db)
+                    })
         
         # Check for composer data
         composer_data = j(cur, "ItemTable", "composer.composerData")
@@ -474,7 +730,15 @@ def iter_chat_from_item_table(db: pathlib.Path) -> Iterable[tuple[str,str,str,st
                     role = msg.get("role", "unknown")
                     content = msg.get("content", "")
                     if content:
-                        yield comp_id, role, content, str(db)
+                        # For composer messages, we don't have tool data structure
+                        bubbles.append({
+                            "composerId": comp_id,
+                            "role": role,
+                            "text": str(content).strip() if content else "",
+                            "tool_data": None,
+                            "timestamp": None,
+                            "db_path": str(db)
+                        })
         
         # Also check for aiService entries
         for key_prefix in ["aiService.prompts", "aiService.generations"]:
@@ -487,11 +751,24 @@ def iter_chat_from_item_table(db: pathlib.Path) -> Iterable[tuple[str,str,str,st
                             for item in data:
                                 if "id" in item and "text" in item:
                                     role = "user" if "prompts" in key_prefix else "assistant"
-                                    yield item.get("id", "unknown"), role, item.get("text", ""), str(db)
+                                    bubbles.append({
+                                        "composerId": item.get("id", "unknown"),
+                                        "role": role,
+                                        "text": str(item.get("text", "")).strip(),
+                                        "tool_data": None,
+                                        "timestamp": None,
+                                        "db_path": str(db)
+                                    })
                     except json.JSONDecodeError:
                         continue
             except sqlite3.Error:
                 continue
+        
+        # Sort by timestamp to preserve chronological order
+        bubbles.sort(key=lambda x: x.get("timestamp") or 0)
+        
+        for bubble in bubbles:
+            yield bubble
     
     except sqlite3.DatabaseError as e:
         logger.debug(f"Database error in ItemTable with {db}: {e}")
@@ -830,9 +1107,33 @@ def extract_chats() -> list[Dict[str,Any]]:
         
         # Extract chat data from workspace's state.vscdb
         msg_count = 0
-        for cid, role, text, db_path in iter_chat_from_item_table(db):
-            # Add the message
-            sessions[cid]["messages"].append({"role": role, "content": text})
+        for bubble_data in iter_chat_from_item_table(db):
+            cid = bubble_data["composerId"]
+            role = bubble_data["role"]
+            text = bubble_data["text"]
+            tool_data = bubble_data["tool_data"]
+            db_path = bubble_data["db_path"]
+            timestamp = bubble_data.get("timestamp")
+            
+            # Build message(s) - can have both tool and text
+            if tool_data:
+                # Create tool message
+                sessions[cid]["messages"].append({
+                    "role": role,
+                    "type": "tool",
+                    "content": tool_data,
+                    "_timestamp": timestamp
+                })
+            
+            if text:
+                # Create text message
+                sessions[cid]["messages"].append({
+                    "role": role,
+                    "type": "text",
+                    "content": text,
+                    "_timestamp": timestamp
+                })
+            
             # Make sure to record the database path
             if "db_path" not in sessions[cid]:
                 sessions[cid]["db_path"] = db_path
@@ -840,6 +1141,16 @@ def extract_chats() -> list[Dict[str,Any]]:
             if cid not in comp_meta:
                 comp_meta[cid] = {"title": f"Chat {cid[:8]}", "createdAt": None, "lastUpdatedAt": None}
                 comp2ws[cid] = ws_id
+        
+        # Sort messages by timestamp
+        for cid in sessions:
+            if sessions[cid]["messages"]:
+                sessions[cid]["messages"].sort(key=lambda m: m.get("_timestamp") or 0)
+                # Remove internal timestamp after sorting
+                for msg in sessions[cid]["messages"]:
+                    if "_timestamp" in msg:
+                        del msg["_timestamp"]
+        
         logger.debug(f"  - Extracted {msg_count} messages from workspace {ws_id}")
     
     logger.debug(f"Processed {ws_count} workspaces")
@@ -850,8 +1161,33 @@ def extract_chats() -> list[Dict[str,Any]]:
         logger.debug(f"Processing global storage: {global_db}")
         # Extract bubbles from cursorDiskKV
         msg_count = 0
-        for cid, role, text, db_path in iter_bubbles_from_disk_kv(global_db):
-            sessions[cid]["messages"].append({"role": role, "content": text})
+        for bubble_data in iter_bubbles_from_disk_kv(global_db):
+            cid = bubble_data["composerId"]
+            role = bubble_data["role"]
+            text = bubble_data["text"]
+            tool_data = bubble_data["tool_data"]
+            db_path = bubble_data["db_path"]
+            timestamp = bubble_data.get("timestamp")
+            
+            # Build message(s) - can have both tool and text
+            if tool_data:
+                # Create tool message
+                sessions[cid]["messages"].append({
+                    "role": role,
+                    "type": "tool",
+                    "content": tool_data,
+                    "_timestamp": timestamp
+                })
+            
+            if text:
+                # Create text message
+                sessions[cid]["messages"].append({
+                    "role": role,
+                    "type": "text",
+                    "content": text,
+                    "_timestamp": timestamp
+                })
+            
             # Record the database path
             if "db_path" not in sessions[cid]:
                 sessions[cid]["db_path"] = db_path
@@ -859,6 +1195,16 @@ def extract_chats() -> list[Dict[str,Any]]:
             if cid not in comp_meta:
                 comp_meta[cid] = {"title": f"Chat {cid[:8]}", "createdAt": None, "lastUpdatedAt": None}
                 comp2ws[cid] = "(global)"
+        
+        # Sort messages by timestamp
+        for cid in sessions:
+            if sessions[cid]["messages"]:
+                sessions[cid]["messages"].sort(key=lambda m: m.get("_timestamp") or 0)
+                # Remove internal timestamp after sorting
+                for msg in sessions[cid]["messages"]:
+                    if "_timestamp" in msg:
+                        del msg["_timestamp"]
+        
         logger.debug(f"  - Extracted {msg_count} messages from global cursorDiskKV bubbles")
         
         # Extract composer data
@@ -889,8 +1235,26 @@ def extract_chats() -> list[Dict[str,Any]]:
                     # Type 1 = user, Type 2 = assistant
                     role = "user" if msg_type == 1 else "assistant"
                     content = msg.get("text", "")
+                    
+                    # Check for tool data in message
+                    tool_info = extract_tool_info(msg)
+                    
+                    if tool_info:
+                        # Create tool message
+                        sessions[cid]["messages"].append({
+                            "role": role,
+                            "type": "tool",
+                            "content": tool_info
+                        })
+                        msg_count += 1
+                    
                     if content and isinstance(content, str):
-                        sessions[cid]["messages"].append({"role": role, "content": content})
+                        # Create text message
+                        sessions[cid]["messages"].append({
+                            "role": role,
+                            "type": "text",
+                            "content": content
+                        })
                         msg_count += 1
                 
                 if msg_count > 0:
@@ -925,7 +1289,21 @@ def extract_chats() -> list[Dict[str,Any]]:
                         
                         if content and isinstance(content, str):
                             role = "user" if bubble.get("type") == "user" else "assistant"
-                            sessions[tab_id]["messages"].append({"role": role, "content": content})
+                            tool_info = extract_tool_info(bubble)
+                            
+                            if tool_info:
+                                sessions[tab_id]["messages"].append({
+                                    "role": role,
+                                    "type": "tool",
+                                    "content": tool_info
+                                })
+                                msg_count += 1
+                            
+                            sessions[tab_id]["messages"].append({
+                                "role": role,
+                                "type": "text",
+                                "content": content
+                            })
                             msg_count += 1
                 logger.debug(f"  - Extracted {msg_count} messages from global chat data")
             con.close()
@@ -1042,25 +1420,37 @@ def transform_chat_to_export_format(chat: Dict[str, Any]) -> Dict[str, Any]:
     
     for i, msg in enumerate(messages):
         role = msg.get("role", "unknown")
+        msg_type = msg.get("type", "text")
         content = msg.get("content", "")
-        
-        if not content or not isinstance(content, str):
-            continue
         
         # Generate timestamp for this message
         msg_timestamp = timestamp_to_iso(None, current_time)
         
-        # Build message object
-        message_obj = {
-            "role": role,
-            "type": "text",  # Default to text, as we don't have tool information
-            "content": content,
-            "timestamp": msg_timestamp
-        }
-        
-        # Add inputs for user messages if available (we don't have this data, but structure is ready)
-        # if role == "user" and "inputs" in msg:
-        #     message_obj["inputs"] = msg["inputs"]
+        # Build message object based on type
+        if msg_type == "tool" and isinstance(content, dict):
+            # Tool message - preserve structure matching Claude format
+            message_obj = {
+                "role": role,
+                "type": "tool",
+                "content": {
+                    "toolName": content.get("toolName", "unknown"),
+                    "toolInput": content.get("toolInput", {}),
+                    "toolOutput": content.get("toolOutput", "")
+                },
+                "timestamp": msg_timestamp
+            }
+        else:
+            # Text message
+            if not content or not isinstance(content, str):
+                # Skip if content is invalid
+                continue
+            
+            message_obj = {
+                "role": role,
+                "type": "text",
+                "content": content,
+                "timestamp": msg_timestamp
+            }
         
         transformed_messages.append(message_obj)
         
