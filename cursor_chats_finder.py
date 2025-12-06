@@ -54,69 +54,317 @@ class CursorChatFinder(BaseChatFinder):
         """Find all chat database files and composer IDs.
         
         Returns:
-            List of tuples (composer_id, db_path) or similar identifiers.
+            List of tuples (composer_id, db_path, workspace_id) for each chat.
         """
-        pass
+        root = self.get_storage_root()
+        if not root:
+            return []
+        
+        chat_identifiers = []
+        
+        # 1. Process workspace DBs
+        ws_root = root / "User" / "workspaceStorage"
+        if ws_root.exists():
+            for folder in ws_root.iterdir():
+                db = folder / "state.vscdb"
+                if db.exists():
+                    ws_id = folder.name
+                    try:
+                        con = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
+                        cur = con.cursor()
+                        
+                        # Get composer data from ItemTable
+                        composer_data = j(cur, "ItemTable", "composer.composerData")
+                        if composer_data:
+                            for comp in composer_data.get("allComposers", []):
+                                comp_id = comp.get("composerId")
+                                if comp_id:
+                                    chat_identifiers.append((comp_id, str(db), ws_id))
+                        
+                        # Get chat tabs from chatdata
+                        chat_data = j(cur, "ItemTable", "workbench.panel.aichat.view.aichat.chatdata")
+                        if chat_data and "tabs" in chat_data:
+                            for tab in chat_data.get("tabs", []):
+                                tab_id = tab.get("tabId")
+                                if tab_id:
+                                    chat_identifiers.append((tab_id, str(db), ws_id))
+                        
+                        con.close()
+                    except Exception:
+                        continue
+        
+        # 2. Process global storage
+        global_db = global_storage_path(root)
+        if global_db:
+            try:
+                con = sqlite3.connect(f"file:{global_db}?mode=ro", uri=True)
+                cur = con.cursor()
+                
+                # Get composer data from cursorDiskKV
+                cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='cursorDiskKV'")
+                if cur.fetchone():
+                    cur.execute("SELECT key, value FROM cursorDiskKV WHERE key LIKE 'composerData:%'")
+                    for k, v in cur.fetchall():
+                        try:
+                            composer_id = k.split(":")[1]
+                            chat_identifiers.append((composer_id, str(global_db), "(global)"))
+                        except Exception:
+                            continue
+                
+                # Get bubbles (which have composer IDs)
+                cur.execute("SELECT key FROM cursorDiskKV WHERE key LIKE 'bubbleId:%'")
+                for (k,) in cur.fetchall():
+                    try:
+                        composer_id = k.split(":")[1]
+                        # Only add if not already in list
+                        if not any(cid == composer_id for cid, _, _ in chat_identifiers):
+                            chat_identifiers.append((composer_id, str(global_db), "(global)"))
+                    except Exception:
+                        continue
+                
+                # Get chat tabs from global ItemTable
+                chat_data = j(cur, "ItemTable", "workbench.panel.aichat.view.aichat.chatdata")
+                if chat_data and "tabs" in chat_data:
+                    for tab in chat_data.get("tabs", []):
+                        tab_id = tab.get("tabId")
+                        if tab_id and not any(cid == tab_id for cid, _, _ in chat_identifiers):
+                            chat_identifiers.append((tab_id, str(global_db), "(global)"))
+                
+                con.close()
+            except Exception:
+                pass
+        
+        return chat_identifiers
     
     def _generate_chat_id(self, file_path_or_key: Any) -> str:
         """Generate unique chat ID from composer ID or database key.
         
         Args:
-            file_path_or_key: Composer ID (str) or tuple (composer_id, db_path)
+            file_path_or_key: Tuple (composer_id, db_path, workspace_id)
             
         Returns:
             Unique chat ID string.
         """
-        pass
+        if not isinstance(file_path_or_key, tuple) or len(file_path_or_key) < 2:
+            return ""
+        
+        composer_id = file_path_or_key[0]
+        db_path = file_path_or_key[1]
+        
+        # Create unique key from composer_id and db_path
+        unique_key = f"{composer_id}:{db_path}"
+        
+        return self._generate_unique_id(unique_key)
     
     def _extract_metadata_lightweight(self, file_path_or_key: Any) -> Optional[Dict[str, Any]]:
         """Extract minimal metadata without parsing full content.
         
         Args:
-            file_path_or_key: Composer ID (str) or tuple (composer_id, db_path)
+            file_path_or_key: Tuple (composer_id, db_path, workspace_id)
             
         Returns:
             Dict with keys: id, title, date, file_path
             Returns None if metadata cannot be extracted.
         """
-        pass
+        if not isinstance(file_path_or_key, tuple) or len(file_path_or_key) < 3:
+            return None
+        
+        composer_id = file_path_or_key[0]
+        db_path_str = file_path_or_key[1]
+        workspace_id = file_path_or_key[2]
+        
+        try:
+            chat_id = self._generate_chat_id(file_path_or_key)
+            db_path = pathlib.Path(db_path_str)
+            
+            if not db_path.exists():
+                return None
+            
+            title = f"Chat {composer_id[:8]}"
+            date_str = ""
+            
+            # Try to get metadata from database
+            try:
+                con = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+                cur = con.cursor()
+                
+                # Try to get composer data
+                if workspace_id != "(global)":
+                    composer_data = j(cur, "ItemTable", "composer.composerData")
+                    if composer_data:
+                        for comp in composer_data.get("allComposers", []):
+                            if comp.get("composerId") == composer_id:
+                                comp_title = comp.get("name", "")
+                                if comp_title:
+                                    title = comp_title
+                                created_at = comp.get("createdAt")
+                                if created_at:
+                                    if isinstance(created_at, (int, float)):
+                                        if created_at > 1e10:  # milliseconds
+                                            dt = datetime.datetime.fromtimestamp(created_at / 1000, tz=datetime.timezone.utc)
+                                        else:  # seconds
+                                            dt = datetime.datetime.fromtimestamp(created_at, tz=datetime.timezone.utc)
+                                        date_str = dt.strftime("%Y-%m-%d")
+                                break
+                else:
+                    # Global storage - check cursorDiskKV
+                    cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='cursorDiskKV'")
+                    if cur.fetchone():
+                        cur.execute("SELECT value FROM cursorDiskKV WHERE key = ?", (f"composerData:{composer_id}",))
+                        row = cur.fetchone()
+                        if row:
+                            try:
+                                composer_data = json.loads(row[0])
+                                comp_title = composer_data.get("name", "")
+                                if comp_title:
+                                    title = comp_title
+                                created_at = composer_data.get("createdAt")
+                                if created_at:
+                                    if isinstance(created_at, (int, float)):
+                                        if created_at > 1e10:  # milliseconds
+                                            dt = datetime.datetime.fromtimestamp(created_at / 1000, tz=datetime.timezone.utc)
+                                        else:  # seconds
+                                            dt = datetime.datetime.fromtimestamp(created_at, tz=datetime.timezone.utc)
+                                        date_str = dt.strftime("%Y-%m-%d")
+                            except Exception:
+                                pass
+                
+                con.close()
+            except Exception:
+                pass
+            
+            # If no date found, use current date
+            if not date_str:
+                date_str = datetime.datetime.now().strftime("%Y-%m-%d")
+            
+            return {
+                "id": chat_id,
+                "title": title,
+                "date": date_str,
+                "file_path": db_path_str
+            }
+        except Exception:
+            return None
     
     def _parse_chat_full(self, file_path_or_key: Any) -> Optional[Dict[str, Any]]:
         """Parse full chat content.
         
         Args:
-            file_path_or_key: Composer ID (str) or tuple (composer_id, db_path)
+            file_path_or_key: Tuple (composer_id, db_path, workspace_id)
             
         Returns:
             Full chat dict with title, metadata, createdAt, messages.
             Returns None if chat cannot be parsed.
         """
-        pass
-    
-    def get_chat_metadata_list(self) -> List[Dict[str, Any]]:
-        """Return list of chats with minimal metadata (title, date, file_path).
+        if not isinstance(file_path_or_key, tuple) or len(file_path_or_key) < 3:
+            return None
         
-        Only reads enough to extract title and basic info.
-        Does not parse full message content.
+        composer_id = file_path_or_key[0]
+        db_path_str = file_path_or_key[1]
+        workspace_id = file_path_or_key[2]
         
-        Returns:
-            List of dicts with keys: id, title, date, file_path
-        """
-        pass
-    
-    def parse_chat_by_id(self, chat_id: str) -> Dict[str, Any]:
-        """Parse a specific chat into full format.
-        
-        Args:
-            chat_id: Unique chat ID returned by get_chat_metadata_list()
+        try:
+            db_path = pathlib.Path(db_path_str)
+            if not db_path.exists():
+                return None
             
-        Returns:
-            Full chat dict with title, metadata, createdAt, messages
+            # Extract messages for this composer
+            messages = []
             
-        Raises:
-            ValueError: If chat_id is not found
-        """
-        pass
+            # Try to get messages from ItemTable (workspace)
+            if workspace_id != "(global)":
+                for cid, role, text, _ in iter_chat_from_item_table(db_path):
+                    if cid == composer_id:
+                        messages.append({"role": role, "content": text})
+            
+            # Try to get messages from cursorDiskKV (global)
+            if workspace_id == "(global)":
+                for cid, role, text, _ in iter_bubbles_from_disk_kv(db_path):
+                    if cid == composer_id:
+                        messages.append({"role": role, "content": text})
+                
+                # Also try composer data
+                for cid, data, _ in iter_composer_data(db_path):
+                    if cid == composer_id:
+                        conversation = data.get("conversation", [])
+                        for msg in conversation:
+                            msg_type = msg.get("type")
+                            if msg_type is None:
+                                continue
+                            role = "user" if msg_type == 1 else "assistant"
+                            content = msg.get("text", "")
+                            if content and isinstance(content, str):
+                                messages.append({"role": role, "content": content})
+            
+            if not messages:
+                return None
+            
+            # Get project info
+            project_name = "Unknown Project"
+            if workspace_id != "(global)":
+                try:
+                    proj, _ = workspace_info(db_path)
+                    project_name = proj.get("name", "Unknown Project")
+                except Exception:
+                    pass
+            
+            # Get metadata
+            title = f"Chat {composer_id[:8]}"
+            created_at_ms = None
+            
+            try:
+                con = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+                cur = con.cursor()
+                
+                if workspace_id != "(global)":
+                    composer_data = j(cur, "ItemTable", "composer.composerData")
+                    if composer_data:
+                        for comp in composer_data.get("allComposers", []):
+                            if comp.get("composerId") == composer_id:
+                                comp_title = comp.get("name", "")
+                                if comp_title:
+                                    title = comp_title
+                                created_at_ms = comp.get("createdAt")
+                                break
+                else:
+                    cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='cursorDiskKV'")
+                    if cur.fetchone():
+                        cur.execute("SELECT value FROM cursorDiskKV WHERE key = ?", (f"composerData:{composer_id}",))
+                        row = cur.fetchone()
+                        if row:
+                            try:
+                                composer_data = json.loads(row[0])
+                                comp_title = composer_data.get("name", "")
+                                if comp_title:
+                                    title = comp_title
+                                created_at_ms = composer_data.get("createdAt")
+                            except Exception:
+                                pass
+                
+                con.close()
+            except Exception:
+                pass
+            
+            # Build chat dict in the format expected by transform_chat_to_export_format
+            chat_dict = {
+                "project": {"name": project_name, "rootPath": "(unknown)"},
+                "session": {
+                    "composerId": composer_id,
+                    "title": title,
+                    "createdAt": created_at_ms,
+                    "lastUpdatedAt": created_at_ms
+                },
+                "messages": messages,
+                "workspace_id": workspace_id
+            }
+            
+            # Transform to export format
+            transformed = transform_chat_to_export_format(chat_dict)
+            return transformed
+        except Exception:
+            return None
+    
+    # get_chat_metadata_list and parse_chat_by_id are inherited from base class
     
     def extract_chats(self) -> list[Dict[str, Any]]:
         """Extract all chats from Cursor storage.
@@ -895,4 +1143,46 @@ def main():
     return 0
 
 if __name__ == '__main__':
-    exit(main())
+    import argparse
+    
+    parser = argparse.ArgumentParser(description='Export Cursor chat data to JSON')
+    parser.add_argument('-o', '--output', type=str, default=None,
+                       help='Output JSON file for exporting all chats (default: result/cursor_chats_export.json)')
+    parser.add_argument('--export', type=str, default=None,
+                       help='Export a specific chat by ID')
+    parser.add_argument('--debug', action='store_true', help='Enable debug logging')
+    args = parser.parse_args()
+    
+    if args.debug:
+        logging.getLogger().setLevel(logging.DEBUG)
+    
+    finder = CursorChatFinder()
+    
+    # Two-step approach: --export=chat_id exports specific chat
+    if args.export:
+        try:
+            chat_data = finder.parse_chat_by_id(args.export)
+            # Save single chat to results folder
+            output_path = finder._get_default_output_path(f"cursor_chat_{args.export[:8]}.json")
+            output_path.write_text(
+                json.dumps(chat_data, ensure_ascii=False, indent=2),
+                encoding="utf-8"
+            )
+            print(f"Exported chat {args.export} to {output_path}")
+        except ValueError as e:
+            print(f"Error: {e}")
+            exit(1)
+    # List mode: no arguments prints all chats with IDs
+    elif args.output is None:
+        metadata_list = finder.get_chat_metadata_list()
+        print(f"Found {len(metadata_list)} chats:")
+        for chat in metadata_list:
+            print(f"  {chat['id']} - \"{chat['title']}\" ({chat['date']})")
+    # Export all mode: --output specified exports all chats
+    else:
+        try:
+            output_file = export_chats_to_json(args.output)
+            print(f"\n✓ Successfully exported chats to: {output_file}")
+        except Exception as e:
+            print(f"\n✗ Error: {e}")
+            exit(1)

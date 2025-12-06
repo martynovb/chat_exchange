@@ -53,7 +53,15 @@ class CopilotChatFinder(BaseChatFinder):
         Returns:
             Unique chat ID string.
         """
-        pass
+        if not isinstance(file_path_or_key, pathlib.Path):
+            return ""
+        
+        # Create unique key from workspace_id and file name
+        workspace_id = file_path_or_key.parent.parent.name
+        file_name = file_path_or_key.name
+        unique_key = f"{workspace_id}/{file_name}"
+        
+        return self._generate_unique_id(unique_key)
 
     def _extract_metadata_lightweight(self, file_path_or_key: Any) -> Optional[Dict[str, Any]]:
         """Extract minimal metadata without parsing full content.
@@ -65,7 +73,44 @@ class CopilotChatFinder(BaseChatFinder):
             Dict with keys: id, title, date, file_path
             Returns None if metadata cannot be extracted.
         """
-        pass
+        if not isinstance(file_path_or_key, pathlib.Path):
+            return None
+        
+        try:
+            chat_id = self._generate_chat_id(file_path_or_key)
+            
+            # Read JSON file but only extract metadata fields
+            raw_data = json.loads(file_path_or_key.read_text(encoding="utf-8"))
+            
+            # Extract title
+            title = raw_data.get("customTitle", "(untitled)")
+            if not title or title == "(untitled)":
+                session_id = raw_data.get("sessionId", "unknown")
+                title = f"Chat {session_id[:8]}"
+            
+            # Extract creation date
+            creation_date_ms = raw_data.get("creationDate")
+            if creation_date_ms:
+                timestamp_sec = creation_date_ms / 1000.0
+                dt = datetime.datetime.fromtimestamp(timestamp_sec, tz=datetime.timezone.utc)
+                date_str = dt.strftime("%Y-%m-%d")
+            else:
+                # Use file modification time as fallback
+                try:
+                    mtime = file_path_or_key.stat().st_mtime
+                    dt = datetime.datetime.fromtimestamp(mtime)
+                    date_str = dt.strftime("%Y-%m-%d")
+                except Exception:
+                    date_str = datetime.datetime.now().strftime("%Y-%m-%d")
+            
+            return {
+                "id": chat_id,
+                "title": title,
+                "date": date_str,
+                "file_path": str(file_path_or_key)
+            }
+        except Exception:
+            return None
 
     def _parse_chat_full(self, file_path_or_key: Any) -> Optional[Dict[str, Any]]:
         """Parse full chat content.
@@ -77,32 +122,23 @@ class CopilotChatFinder(BaseChatFinder):
             Full chat dict with title, metadata, createdAt, messages.
             Returns None if chat cannot be parsed.
         """
-        pass
-
-    def get_chat_metadata_list(self) -> List[Dict[str, Any]]:
-        """Return list of chats with minimal metadata (title, date, file_path).
+        if not isinstance(file_path_or_key, pathlib.Path):
+            return None
         
-        Only reads enough to extract title and basic info.
-        Does not parse full message content.
-        
-        Returns:
-            List of dicts with keys: id, title, date, file_path
-        """
-        pass
-
-    def parse_chat_by_id(self, chat_id: str) -> Dict[str, Any]:
-        """Parse a specific chat into full format.
-        
-        Args:
-            chat_id: Unique chat ID returned by get_chat_metadata_list()
+        try:
+            raw_data = json.loads(file_path_or_key.read_text(encoding="utf-8"))
+            workspace_id = file_path_or_key.parent.parent.name
+            storage_root = self.get_storage_root()
             
-        Returns:
-            Full chat dict with title, metadata, createdAt, messages
+            if not storage_root:
+                return None
             
-        Raises:
-            ValueError: If chat_id is not found
-        """
-        pass
+            transformed_chat = self._transform_chat_to_new_format(raw_data, workspace_id, storage_root)
+            return transformed_chat
+        except Exception:
+            return None
+
+    # get_chat_metadata_list and parse_chat_by_id are inherited from base class
 
     def _timestamp_ms_to_iso(self, timestamp_ms: Optional[int]) -> str:
         """Convert milliseconds timestamp to ISO format string."""
@@ -595,17 +631,35 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="Extract GitHub Copilot chatSessions from VS Code workspaceStorage")
-    parser.add_argument("--out", type=pathlib.Path, default=None, help="Output JSON file (default: result/copilot_chats.json)")
+    parser.add_argument("--out", type=pathlib.Path, default=None, help="Output JSON file for exporting all chats (default: result/copilot_chats.json)")
+    parser.add_argument("--export", type=str, default=None, help="Export a specific chat by ID")
     args = parser.parse_args()
 
     finder = CopilotChatFinder()
     
-    # Default to result folder if not specified
-    if args.out is None:
-        args.out = finder._get_default_output_path("copilot_chats.json")
+    # Two-step approach: --export=chat_id exports specific chat
+    if args.export:
+        try:
+            chat_data = finder.parse_chat_by_id(args.export)
+            # Save single chat to results folder
+            output_path = finder._get_default_output_path(f"copilot_chat_{args.export[:8]}.json")
+            output_path.write_text(
+                json.dumps(chat_data, ensure_ascii=False, indent=2),
+                encoding="utf-8"
+            )
+            print(f"Exported chat {args.export} to {output_path}")
+        except ValueError as e:
+            print(f"Error: {e}")
+            exit(1)
+    # List mode: no arguments prints all chats with IDs
+    elif args.out is None:
+        metadata_list = finder.get_chat_metadata_list()
+        print(f"Found {len(metadata_list)} chats:")
+        for chat in metadata_list:
+            print(f"  {chat['id']} - \"{chat['title']}\" ({chat['date']})")
+    # Export all mode: --out specified exports all chats
     else:
         # Ensure parent directory exists
         finder._ensure_output_dir(args.out)
-
-    result = finder.export_chats(args.out)
-    print(f"Extracted {len(result)} copilot chat sessions to {args.out}")
+        result = finder.export_chats(args.out)
+        print(f"Extracted {len(result)} copilot chat sessions to {args.out}")

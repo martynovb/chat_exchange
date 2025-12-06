@@ -111,7 +111,15 @@ class ClaudeChatFinder(BaseChatFinder):
         Returns:
             Unique chat ID string.
         """
-        pass
+        if not isinstance(file_path_or_key, pathlib.Path):
+            return ""
+        
+        # Create unique key from project name and file name
+        project_name = file_path_or_key.parent.name
+        file_name = file_path_or_key.name
+        unique_key = f"{project_name}/{file_name}"
+        
+        return self._generate_unique_id(unique_key)
 
     def _extract_metadata_lightweight(self, file_path_or_key: Any) -> Optional[Dict[str, Any]]:
         """Extract minimal metadata without parsing full content.
@@ -123,7 +131,95 @@ class ClaudeChatFinder(BaseChatFinder):
             Dict with keys: id, title, date, file_path
             Returns None if metadata cannot be extracted.
         """
-        pass
+        if not isinstance(file_path_or_key, pathlib.Path):
+            return None
+        
+        try:
+            chat_id = self._generate_chat_id(file_path_or_key)
+            
+            # Read first few lines to extract title and timestamp
+            title = "Untitled Conversation"
+            date_str = ""
+            
+            if file_path_or_key.suffix == ".jsonl":
+                # Read first few lines of JSONL
+                with file_path_or_key.open("r", encoding="utf-8") as f:
+                    for i, line in enumerate(f):
+                        if i >= 10:  # Only read first 10 lines
+                            break
+                        line = line.strip()
+                        if not line:
+                            continue
+                        try:
+                            obj = json.loads(line)
+                            # Look for user message to extract title
+                            if obj.get("type") == "user" and title == "Untitled Conversation":
+                                message = obj.get("message", {})
+                                content = message.get("content", "")
+                                text_content = self._extract_text_content(content)
+                                if text_content.strip():
+                                    title = text_content.strip()[:100]
+                                    if len(text_content) > 100:
+                                        title += "..."
+                            
+                            # Get first timestamp
+                            if not date_str and obj.get("timestamp"):
+                                timestamp = obj.get("timestamp")
+                                dt = self._parse_iso_timestamp(timestamp)
+                                if dt:
+                                    date_str = dt.strftime("%Y-%m-%d")
+                        except json.JSONDecodeError:
+                            continue
+            else:
+                # Read JSON file (but don't parse fully)
+                try:
+                    raw_data = json.loads(file_path_or_key.read_text(encoding="utf-8"))
+                    if isinstance(raw_data, dict):
+                        raw_data = [raw_data]
+                    
+                    # Extract from first entry
+                    if raw_data:
+                        first_entry = raw_data[0]
+                        if first_entry.get("type") == "user":
+                            message = first_entry.get("message", {})
+                            content = message.get("content", "")
+                            text_content = self._extract_text_content(content)
+                            if text_content.strip():
+                                title = text_content.strip()[:100]
+                                if len(text_content) > 100:
+                                    title += "..."
+                        
+                        if first_entry.get("timestamp"):
+                            timestamp = first_entry.get("timestamp")
+                            dt = self._parse_iso_timestamp(timestamp)
+                            if dt:
+                                date_str = dt.strftime("%Y-%m-%d")
+                except Exception:
+                    pass
+            
+            # If no title found, use file name
+            if title == "Untitled Conversation":
+                title = file_path_or_key.stem
+                if len(title) > 50:
+                    title = title[:50] + "..."
+            
+            # If no date found, use file modification time
+            if not date_str:
+                try:
+                    mtime = file_path_or_key.stat().st_mtime
+                    dt = datetime.datetime.fromtimestamp(mtime)
+                    date_str = dt.strftime("%Y-%m-%d")
+                except Exception:
+                    date_str = datetime.datetime.now().strftime("%Y-%m-%d")
+            
+            return {
+                "id": chat_id,
+                "title": title,
+                "date": date_str,
+                "file_path": str(file_path_or_key)
+            }
+        except Exception:
+            return None
 
     def _parse_chat_full(self, file_path_or_key: Any) -> Optional[Dict[str, Any]]:
         """Parse full chat content.
@@ -135,32 +231,35 @@ class ClaudeChatFinder(BaseChatFinder):
             Full chat dict with title, metadata, createdAt, messages.
             Returns None if chat cannot be parsed.
         """
-        pass
-
-    def get_chat_metadata_list(self) -> List[Dict[str, Any]]:
-        """Return list of chats with minimal metadata (title, date, file_path).
+        if not isinstance(file_path_or_key, pathlib.Path):
+            return None
         
-        Only reads enough to extract title and basic info.
-        Does not parse full message content.
-        
-        Returns:
-            List of dicts with keys: id, title, date, file_path
-        """
-        pass
-
-    def parse_chat_by_id(self, chat_id: str) -> Dict[str, Any]:
-        """Parse a specific chat into full format.
-        
-        Args:
-            chat_id: Unique chat ID returned by get_chat_metadata_list()
+        try:
+            if file_path_or_key.suffix == ".jsonl":
+                # Parse JSONL file
+                raw_data = self._parse_jsonl_file(file_path_or_key)
+                if not raw_data:
+                    return None
+            else:
+                # Parse regular JSON file
+                raw_data = json.loads(file_path_or_key.read_text(encoding="utf-8"))
+                # If it's already a list, use it; if it's a dict, wrap it
+                if isinstance(raw_data, dict):
+                    raw_data = [raw_data]
             
-        Returns:
-            Full chat dict with title, metadata, createdAt, messages
+            # Transform to export format
+            project_name = file_path_or_key.parent.name
+            transformed = self._transform_chat_to_export_format(
+                raw_data,
+                project_name,
+                file_path_or_key.name
+            )
             
-        Raises:
-            ValueError: If chat_id is not found
-        """
-        pass
+            return transformed
+        except Exception:
+            return None
+
+    # get_chat_metadata_list and parse_chat_by_id are inherited from base class
 
     def _parse_iso_timestamp(self, timestamp_str: str) -> Optional[datetime.datetime]:
         """Parse ISO timestamp string to datetime object."""
@@ -466,18 +565,41 @@ if __name__ == "__main__":
         "--out",
         type=pathlib.Path,
         default=None,
-        help="Output JSON file (default: result/claude_chats.json)"
+        help="Output JSON file for exporting all chats (default: result/claude_chats.json)"
+    )
+    parser.add_argument(
+        "--export",
+        type=str,
+        default=None,
+        help="Export a specific chat by ID"
     )
     args = parser.parse_args()
 
     finder = ClaudeChatFinder()
     
-    # Default to result folder if not specified
-    if args.out is None:
-        args.out = finder._get_default_output_path("claude_chats.json")
+    # Two-step approach: --export=chat_id exports specific chat
+    if args.export:
+        try:
+            chat_data = finder.parse_chat_by_id(args.export)
+            # Save single chat to results folder
+            output_path = finder._get_default_output_path(f"claude_chat_{args.export[:8]}.json")
+            output_path.write_text(
+                json.dumps(chat_data, ensure_ascii=False, indent=2),
+                encoding="utf-8"
+            )
+            print(f"Exported chat {args.export} to {output_path}")
+        except ValueError as e:
+            print(f"Error: {e}")
+            exit(1)
+    # List mode: no arguments prints all chats with IDs
+    elif args.out is None:
+        metadata_list = finder.get_chat_metadata_list()
+        print(f"Found {len(metadata_list)} chats:")
+        for chat in metadata_list:
+            print(f"  {chat['id']} - \"{chat['title']}\" ({chat['date']})")
+    # Export all mode: --out specified exports all chats
     else:
         # Ensure parent directory exists
         finder._ensure_output_dir(args.out)
-
-    result = finder.export_chats(args.out)
-    print(f"Extracted {len(result)} Claude Code chat sessions to {args.out}")
+        result = finder.export_chats(args.out)
+        print(f"Extracted {len(result)} Claude Code chat sessions to {args.out}")

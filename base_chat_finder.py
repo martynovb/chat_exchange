@@ -141,7 +141,19 @@ class BaseChatFinder(ABC):
         Returns:
             List of dicts with keys: id, title, date, file_path
         """
-        pass
+        chat_files = self.find_all_chat_files()
+        metadata_list = []
+        
+        for file_path_or_key in chat_files:
+            try:
+                metadata = self._extract_metadata_lightweight(file_path_or_key)
+                if metadata:
+                    metadata_list.append(metadata)
+            except Exception:
+                # Skip files that can't be read
+                continue
+        
+        return metadata_list
     
     def parse_chat_by_id(self, chat_id: str) -> Dict[str, Any]:
         """Parse a specific chat into full format.
@@ -155,5 +167,19 @@ class BaseChatFinder(ABC):
         Raises:
             ValueError: If chat_id is not found
         """
-        pass
+        # Find the chat file/key that matches this ID
+        chat_files = self.find_all_chat_files()
+        
+        for file_path_or_key in chat_files:
+            try:
+                chat_id_for_file = self._generate_chat_id(file_path_or_key)
+                if chat_id_for_file == chat_id:
+                    # Found the matching chat, parse it fully
+                    parsed = self._parse_chat_full(file_path_or_key)
+                    if parsed:
+                        return parsed
+            except Exception:
+                continue
+        
+        raise ValueError(f"Chat ID '{chat_id}' not found")
 

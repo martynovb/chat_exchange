@@ -69,41 +69,6 @@
             font-size: 14px;
         }
 
-        .conversations-list {
-            max-height: 200px;
-            overflow-y: auto;
-            border-bottom: 1px solid #eee;
-            padding: 10px;
-        }
-
-        .conversation-item {
-            padding: 10px 15px;
-            cursor: pointer;
-            border-radius: 4px;
-            margin: 5px 0;
-            transition: background 0.2s;
-        }
-
-        .conversation-item:hover {
-            background: #f0f0f0;
-        }
-
-        .conversation-item.active {
-            background: #e3f2fd;
-            font-weight: bold;
-        }
-
-        .conversation-title {
-            font-weight: 500;
-            color: #333;
-        }
-
-        .conversation-meta {
-            font-size: 12px;
-            color: #999;
-            margin-top: 4px;
-        }
-
         .chat-container {
             display: none;
             padding: 20px;
@@ -266,19 +231,15 @@
 
         <div id="errorContainer"></div>
 
-        <div id="conversationsList" class="conversations-list" style="display: none;"></div>
-
         <div id="chatContainer" class="chat-container"></div>
     </div>
 
     <script>
-        let conversations = [];
-        let currentConversationIndex = -1;
+        let conversation = null;
 
         const fileInput = document.getElementById('fileInput');
         const fileName = document.getElementById('fileName');
         const errorContainer = document.getElementById('errorContainer');
-        const conversationsList = document.getElementById('conversationsList');
         const chatContainer = document.getElementById('chatContainer');
 
         fileInput.addEventListener('change', handleFileUpload);
@@ -289,25 +250,32 @@
 
             fileName.textContent = `Selected: ${file.name}`;
             errorContainer.innerHTML = '';
-            conversations = [];
-            currentConversationIndex = -1;
+            conversation = null;
 
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
                     const jsonData = JSON.parse(e.target.result);
                     
-                    if (!Array.isArray(jsonData)) {
-                        showError('JSON file must contain an array of conversations');
+                    // Accept either a single chat object or an array with one item
+                    if (Array.isArray(jsonData)) {
+                        if (jsonData.length === 0) {
+                            showError('JSON file contains an empty array');
+                            return;
+                        }
+                        if (jsonData.length > 1) {
+                            showError('JSON file contains multiple conversations. Please provide a file with a single chat.');
+                            return;
+                        }
+                        conversation = jsonData[0];
+                    } else if (typeof jsonData === 'object' && jsonData !== null) {
+                        conversation = jsonData;
+                    } else {
+                        showError('JSON file must contain a single chat object');
                         return;
                     }
 
-                    conversations = jsonData;
-                    displayConversationsList();
-                    
-                    if (conversations.length > 0) {
-                        displayConversation(0);
-                    }
+                    displayConversation();
                 } catch (error) {
                     showError(`Error parsing JSON: ${error.message}`);
                 }
@@ -324,52 +292,8 @@
             errorContainer.innerHTML = `<div class="error">${message}</div>`;
         }
 
-        function displayConversationsList() {
-            if (conversations.length === 0) {
-                conversationsList.style.display = 'none';
-                return;
-            }
-
-            conversationsList.style.display = 'block';
-            conversationsList.innerHTML = '';
-
-            conversations.forEach((conv, index) => {
-                const item = document.createElement('div');
-                item.className = 'conversation-item';
-                if (index === currentConversationIndex) {
-                    item.classList.add('active');
-                }
-
-                const title = document.createElement('div');
-                title.className = 'conversation-title';
-                title.textContent = conv.title || `Conversation ${index + 1}`;
-
-                const meta = document.createElement('div');
-                meta.className = 'conversation-meta';
-                const metaText = [];
-                if (conv.metadata?.model) metaText.push(conv.metadata.model);
-                if (conv.createdAt) {
-                    const date = new Date(conv.createdAt);
-                    metaText.push(date.toLocaleDateString());
-                }
-                meta.textContent = metaText.join(' • ');
-
-                item.appendChild(title);
-                item.appendChild(meta);
-
-                item.addEventListener('click', () => displayConversation(index));
-                conversationsList.appendChild(item);
-            });
-        }
-
-        function displayConversation(index) {
-            if (index < 0 || index >= conversations.length) return;
-
-            currentConversationIndex = index;
-            const conversation = conversations[index];
-
-            // Update active state in list
-            displayConversationsList();
+        function displayConversation() {
+            if (!conversation) return;
 
             // Display chat
             chatContainer.innerHTML = '';
