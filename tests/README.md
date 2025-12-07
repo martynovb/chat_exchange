@@ -61,3 +61,4 @@ The tests cover:
 - Database operations are mocked for Cursor tests
 - Platform-specific tests use mocking to test different OS behaviors
 
+

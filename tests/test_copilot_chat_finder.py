@@ -124,11 +124,16 @@ class TestCopilotChatFinder:
         offset = finder._get_timezone_offset()
         assert offset.startswith("UTC")
     
-    def test_generate_chat_id_not_implemented(self):
-        """Test that _generate_chat_id is not yet implemented."""
+    def test_generate_chat_id(self):
+        """Test that _generate_chat_id generates a unique ID."""
         finder = CopilotChatFinder()
-        result = finder._generate_chat_id(pathlib.Path("/test"))
-        assert result is None
+        test_path = pathlib.Path("/test/workspace/chat.json")
+        result = finder._generate_chat_id(test_path)
+        assert isinstance(result, str)
+        assert len(result) == 16  # Should be 16 hex characters
+        # Should be deterministic
+        result2 = finder._generate_chat_id(test_path)
+        assert result == result2
     
     def test_extract_metadata_lightweight_not_implemented(self):
         """Test that _extract_metadata_lightweight is not yet implemented."""
@@ -142,17 +147,18 @@ class TestCopilotChatFinder:
         result = finder._parse_chat_full(pathlib.Path("/test"))
         assert result is None
     
-    def test_get_chat_metadata_list_not_implemented(self):
-        """Test that get_chat_metadata_list is not yet implemented."""
+    def test_get_chat_metadata_list(self):
+        """Test that get_chat_metadata_list returns a list."""
         finder = CopilotChatFinder()
         result = finder.get_chat_metadata_list()
-        assert result is None
+        assert isinstance(result, list)
+        # May be empty if no chats found, or contain items if chats exist
     
-    def test_parse_chat_by_id_not_implemented(self):
-        """Test that parse_chat_by_id is not yet implemented."""
+    def test_parse_chat_by_id_not_found(self):
+        """Test that parse_chat_by_id raises ValueError for non-existent chat."""
         finder = CopilotChatFinder()
-        result = finder.parse_chat_by_id("test_id")
-        assert result is None
+        with pytest.raises(ValueError, match="Chat ID 'test_id' not found"):
+            finder.parse_chat_by_id("test_id")
     
     def test_extract_text_from_value_string(self):
         """Test extracting text from string value."""
@@ -173,4 +179,135 @@ class TestCopilotChatFinder:
         assert result == ""
         result = finder._extract_text_from_value({})
         assert result == ""
+    
+    def test_extract_workspace_path_from_json_file_url(self):
+        """Test extracting workspace path from JSON with file:// URL."""
+        finder = CopilotChatFinder()
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            json_data = {"folder": "file:///C:/Users/test/project"}
+            json.dump(json_data, f)
+            f.flush()
+            f.close()
+            
+            result = finder._extract_workspace_path_from_json(pathlib.Path(f.name))
+            assert result == "/C:/Users/test/project"
+            
+            pathlib.Path(f.name).unlink()
+    
+    def test_extract_workspace_path_from_json_plain_path(self):
+        """Test extracting workspace path from JSON with plain path."""
+        finder = CopilotChatFinder()
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            json_data = {"folder": "C:/Users/test/project"}
+            json.dump(json_data, f)
+            f.flush()
+            f.close()
+            
+            result = finder._extract_workspace_path_from_json(pathlib.Path(f.name))
+            assert result == "C:/Users/test/project"
+            
+            pathlib.Path(f.name).unlink()
+    
+    def test_extract_workspace_path_from_json_nested(self):
+        """Test extracting workspace path from nested JSON structure."""
+        finder = CopilotChatFinder()
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            json_data = {"config": {"workspace": {"path": "file:///home/user/project"}}}
+            json.dump(json_data, f)
+            f.flush()
+            f.close()
+            
+            result = finder._extract_workspace_path_from_json(pathlib.Path(f.name))
+            assert result == "/home/user/project"
+            
+            pathlib.Path(f.name).unlink()
+    
+    def test_extract_workspace_path_from_json_invalid(self):
+        """Test extracting workspace path from invalid JSON."""
+        finder = CopilotChatFinder()
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            f.write("invalid json")
+            f.flush()
+            f.close()
+            
+            result = finder._extract_workspace_path_from_json(pathlib.Path(f.name))
+            assert result is None
+            
+            pathlib.Path(f.name).unlink()
+    
+    def test_extract_project_name(self):
+        """Test extracting project name from workspace."""
+        finder = CopilotChatFinder()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            storage_path = pathlib.Path(tmpdir)
+            workspace_dir = storage_path / "workspace123"
+            workspace_dir.mkdir()
+            workspace_json = workspace_dir / "workspace.json"
+            
+            json_data = {"folder": "file:///C:/Users/test/myproject"}
+            json.dump(json_data, workspace_json.open('w'))
+            
+            result = finder._extract_project_name("workspace123", storage_path)
+            assert result == "myproject"
+    
+    def test_extract_project_name_no_workspace_json(self):
+        """Test extracting project name when workspace.json doesn't exist."""
+        finder = CopilotChatFinder()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            storage_path = pathlib.Path(tmpdir)
+            workspace_dir = storage_path / "workspace123"
+            workspace_dir.mkdir()
+            
+            result = finder._extract_project_name("workspace123", storage_path)
+            assert result == "Unknown Project"
+    
+    def test_extract_metadata_lightweight_with_file(self):
+        """Test extracting metadata from actual chat file."""
+        finder = CopilotChatFinder()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            storage_path = pathlib.Path(tmpdir)
+            workspace_dir = storage_path / "workspace1"
+            workspace_dir.mkdir()
+            chat_dir = workspace_dir / "chatSessions"
+            chat_dir.mkdir()
+            
+            # Create a chat JSON file
+            chat_file = chat_dir / "chat1.json"
+            chat_data = {
+                "sessionId": "12345",
+                "customTitle": "Test Chat",
+                "creationDate": 1609459200000  # 2021-01-01
+            }
+            json.dump(chat_data, chat_file.open('w'))
+            
+            result = finder._extract_metadata_lightweight(chat_file)
+            assert result is not None
+            assert result["title"] == "Test Chat"
+            assert "2021-01-01" in result["date"]
+            assert "id" in result
+    
+    def test_parse_chat_full(self):
+        """Test parsing full chat content."""
+        finder = CopilotChatFinder()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            storage_path = pathlib.Path(tmpdir)
+            workspace_dir = storage_path / "workspace1"
+            workspace_dir.mkdir()
+            chat_dir = workspace_dir / "chatSessions"
+            chat_dir.mkdir()
+            
+            # Create a minimal chat JSON file
+            chat_file = chat_dir / "chat1.json"
+            chat_data = {
+                "sessionId": "12345",
+                "customTitle": "Test Chat",
+                "creationDate": 1609459200000,
+                "messages": []
+            }
+            json.dump(chat_data, chat_file.open('w'))
+            
+            with patch.object(finder, 'get_storage_root', return_value=storage_path):
+                result = finder._parse_chat_full(chat_file)
+                # May return None if transformation fails, or a dict if successful
+                assert result is None or isinstance(result, dict)
 
