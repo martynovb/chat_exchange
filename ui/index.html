@@ -352,23 +352,38 @@
 
                 const toolName = document.createElement('div');
                 toolName.className = 'tool-name';
-                toolName.textContent = `🔧 ${message.content.toolName || 'Tool'}`;
+                // Support both old format (toolName) and new format (tool_name)
+                const toolNameValue = message.content.tool_name || message.content.toolName || 'Tool';
+                toolName.textContent = `🔧 ${toolNameValue}`;
 
                 toolDiv.appendChild(toolName);
 
-                if (message.content.toolInput) {
+                // Support both old format (toolInput) and new format (tool_input)
+                const toolInputValue = message.content.tool_input !== undefined ? message.content.tool_input : message.content.toolInput;
+                if (toolInputValue !== undefined && toolInputValue !== null && toolInputValue !== '') {
                     const toolInput = document.createElement('div');
                     toolInput.className = 'tool-input';
-                    toolInput.textContent = `Input: ${JSON.stringify(message.content.toolInput, null, 2)}`;
+                    // Format tool input nicely based on type
+                    let inputText = '';
+                    if (Array.isArray(toolInputValue)) {
+                        inputText = `Input: ${toolInputValue.join(', ')}`;
+                    } else if (typeof toolInputValue === 'object') {
+                        inputText = `Input: ${JSON.stringify(toolInputValue, null, 2)}`;
+                    } else {
+                        inputText = `Input: ${toolInputValue}`;
+                    }
+                    toolInput.textContent = inputText;
                     toolDiv.appendChild(toolInput);
                 }
 
-                if (message.content.toolOutput) {
+                // Support both old format (toolOutput) and new format (tool_output)
+                const toolOutputValue = message.content.tool_output !== undefined ? message.content.tool_output : message.content.toolOutput;
+                if (toolOutputValue !== undefined && toolOutputValue !== null && toolOutputValue !== '') {
                     const toolOutput = document.createElement('div');
                     toolOutput.className = 'tool-output';
-                    toolOutput.textContent = typeof message.content.toolOutput === 'string' 
-                        ? message.content.toolOutput 
-                        : JSON.stringify(message.content.toolOutput, null, 2);
+                    toolOutput.textContent = typeof toolOutputValue === 'string' 
+                        ? toolOutputValue 
+                        : JSON.stringify(toolOutputValue, null, 2);
                     toolDiv.appendChild(toolOutput);
                 }
 

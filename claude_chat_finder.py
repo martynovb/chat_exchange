@@ -26,6 +26,7 @@ import datetime
 from typing import List, Optional, Dict, Any
 
 from base_chat_finder import BaseChatFinder
+from tool_normalizer import tool_name_normalization
 
 """This module exports Claude chat JSON/JSONL files in a standardized format."""
 
@@ -288,6 +289,103 @@ class ClaudeChatFinder(BaseChatFinder):
             return "\n".join(text_parts)
         else:
             return str(content) if content else ""
+    
+    def _normalize_claude_tool_input(self, tool_name: str, normalized_tool_name: str, tool_input: Any) -> Any:
+        """
+        Normalize tool input for Claude-specific tools.
+        
+        Args:
+            tool_name: Original tool name from Claude
+            normalized_tool_name: Normalized tool name
+            tool_input: Original tool input
+            
+        Returns:
+            Normalized tool input
+        """
+        # For web_request operations, format as object with request and optional url
+        if normalized_tool_name == "web_request":
+            result = {}
+            if isinstance(tool_input, dict):
+                # Extract prompt as request (Claude uses "prompt" instead of "searchTerm")
+                if "prompt" in tool_input:
+                    result["request"] = tool_input["prompt"]
+                # Extract url if it exists
+                if "url" in tool_input:
+                    result["url"] = tool_input["url"]
+            elif isinstance(tool_input, str):
+                # If it's just a string, use it as the request
+                result["request"] = tool_input
+            
+            # Return the result object (only if we have at least a request)
+            if "request" in result:
+                return result
+            return tool_input
+        
+        # For read operations, extract targetFile if it exists
+        if normalized_tool_name == "read":
+            if isinstance(tool_input, dict) and "targetFile" in tool_input:
+                return tool_input["targetFile"]
+            elif isinstance(tool_input, str):
+                return tool_input
+        
+        # TODO: Add other Claude-specific input normalization logic
+        return tool_input
+    
+    def _normalize_claude_tool_output(self, tool_name: str, normalized_tool_name: str, tool_output: Any) -> Any:
+        """
+        Normalize tool output for Claude-specific tools.
+        
+        Args:
+            tool_name: Original tool name from Claude
+            normalized_tool_name: Normalized tool name
+            tool_output: Original tool output
+            
+        Returns:
+            Normalized tool output
+        """
+        # For web_request, always return empty output
+        if normalized_tool_name == "web_request":
+            return ""
+        
+        # For read operations, always return empty output
+        if normalized_tool_name == "read":
+            return ""
+        
+        # For create operations, always return empty output
+        if normalized_tool_name == "create":
+            return ""
+        
+        # TODO: Add other Claude-specific output normalization logic
+        return tool_output
+    
+    def _normalize_claude_tool_usage(self, tool_name: str, tool_input: Any, tool_output: Any) -> Optional[Dict[str, Any]]:
+        """
+        Normalize a complete tool usage entry for Claude.
+        
+        Args:
+            tool_name: Original tool name from Claude
+            tool_input: Original tool input
+            tool_output: Original tool output
+            
+        Returns:
+            Normalized tool usage dict with keys: tool_name, tool_input, tool_output
+            Returns None if tool should be skipped
+        """
+        # Normalize tool name using common function
+        normalized_name = tool_name_normalization("claude", tool_name)
+        
+        if normalized_name is None:
+            return None
+        
+        # Apply Claude-specific input/output normalization
+        normalized_input = self._normalize_claude_tool_input(tool_name, normalized_name, tool_input)
+        normalized_output = self._normalize_claude_tool_output(tool_name, normalized_name, tool_output)
+        
+        return {
+            "tool_name": normalized_name,
+            "tool_input": normalized_input,
+            "tool_output": normalized_output
+        }
 
     def _transform_messages(self, data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Transform raw message data to the export format."""
@@ -394,16 +492,16 @@ class ClaudeChatFinder(BaseChatFinder):
                                 elif stderr:
                                     tool_output = stderr
                         
-                        messages.append({
-                            "role": "assistant",
-                            "type": "tool",
-                            "content": {
-                                "toolName": tool_name,
-                                "toolInput": tool_input,
-                                "toolOutput": tool_output
-                            },
-                            "timestamp": timestamp
-                        })
+                        # Normalize tool usage using Claude-specific logic
+                        normalized = self._normalize_claude_tool_usage(tool_name, tool_input, tool_output)
+                        
+                        if normalized:
+                            messages.append({
+                                "role": "assistant",
+                                "type": "tool",
+                                "content": normalized,
+                                "timestamp": timestamp
+                            })
                     
                     # Skip thinking blocks
                     elif item_type == "thinking":

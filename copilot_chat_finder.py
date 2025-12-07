@@ -9,6 +9,7 @@ import re
 from typing import List, Optional, Dict, Any
 
 from base_chat_finder import BaseChatFinder
+from tool_normalizer import tool_name_normalization
 
 """This module exports Copilot chat JSON files in the new standardized format."""
 
@@ -269,6 +270,20 @@ class CopilotChatFinder(BaseChatFinder):
                             file_paths.append(path)
                 if file_paths:
                     tool_input["files"] = file_paths if len(file_paths) > 1 else file_paths[0]
+            
+            # For copilot_readFile, try to extract file path from value if it contains a file reference
+            if tool_id == "copilot_readFile" and value:
+                # Try to extract file path from value (might be in format like "Reading file: path/to/file")
+                # Or check if value itself is a file path
+                if "/" in value or "\\" in value or value.endswith((".py", ".js", ".ts", ".json", ".md", ".txt", ".yaml", ".yml")):
+                    # Might be a file path, try to extract it
+                    # Look for common patterns
+                    path_match = re.search(r'([a-zA-Z]:[\\/][^\s`]+|[\\/][^\s`]+\.\w+)', value)
+                    if path_match:
+                        tool_input["files"] = [path_match.group(1)]
+                    else:
+                        # If value looks like a path, use it directly
+                        tool_input["files"] = [value]
         
         # Extract from resultDetails (for tools that return file lists)
         result_details = tool_invocation.get("resultDetails", [])
@@ -281,6 +296,21 @@ class CopilotChatFinder(BaseChatFinder):
                         file_paths.append(path)
             if file_paths and "files" not in tool_input:
                 tool_input["files"] = file_paths if len(file_paths) > 1 else file_paths[0]
+        
+        # For read operations, also check toolSpecificData or other fields that might contain file info
+        if tool_id in ["copilot_readFile", "copilot_getErrors"] and not tool_input:
+            # Check if toolSpecificData contains file information
+            tool_specific = tool_invocation.get("toolSpecificData")
+            if isinstance(tool_specific, dict):
+                # Look for file paths in toolSpecificData
+                if "file" in tool_specific:
+                    file_path = tool_specific.get("file")
+                    if file_path:
+                        tool_input["files"] = [file_path] if isinstance(file_path, str) else file_path
+                elif "path" in tool_specific:
+                    file_path = tool_specific.get("path")
+                    if file_path:
+                        tool_input["files"] = [file_path] if isinstance(file_path, str) else file_path
         
         return tool_input
 
@@ -304,6 +334,216 @@ class CopilotChatFinder(BaseChatFinder):
             return invocation_msg.get("value", "")
         
         return ""
+    
+    def _normalize_copilot_tool_input(self, tool_name: str, normalized_tool_name: str, tool_input: Any, tool_output: Any = None) -> Any:
+        """
+        Normalize tool input for Copilot-specific tools.
+        
+        Args:
+            tool_name: Original tool name from Copilot
+            normalized_tool_name: Normalized tool name
+            tool_input: Original tool input
+            tool_output: Original tool output (optional, needed for todo/terminal transformation)
+            
+        Returns:
+            Normalized tool input
+        """
+        # For read operations - always return an array
+        if normalized_tool_name == "read":
+            if isinstance(tool_input, dict):
+                # Check if it has files array (Copilot format)
+                if "files" in tool_input:
+                    files_value = tool_input["files"]
+                    # If it's already a list, return as-is
+                    if isinstance(files_value, list):
+                        return files_value
+                    # If it's a single file path string, wrap in array
+                    elif isinstance(files_value, str):
+                        return [files_value] if files_value else []
+                # Check if it has query (for search operations)
+                elif "query" in tool_input:
+                    # For search operations, we might not have files yet
+                    # Return empty array or handle query differently
+                    return []
+                # Check if it has file_path (single file read)
+                elif "file_path" in tool_input:
+                    file_path = tool_input["file_path"]
+                    return [file_path] if file_path else []
+                # Check for relativeWorkspacePath (for consistency)
+                elif "relativeWorkspacePath" in tool_input:
+                    relative_path = tool_input["relativeWorkspacePath"]
+                    return [relative_path] if relative_path else []
+            
+            # If it's already a string, wrap in array
+            elif isinstance(tool_input, str):
+                return [tool_input] if tool_input else []
+            
+            # If it's already a list, return as-is
+            elif isinstance(tool_input, list):
+                return tool_input
+        
+        # For terminal operations, extract commandLine.original from tool_output
+        if normalized_tool_name == "terminal":
+            if tool_output and isinstance(tool_output, dict):
+                command_line = tool_output.get("commandLine", {})
+                if isinstance(command_line, dict):
+                    original_command = command_line.get("original", "")
+                    if original_command:
+                        return original_command
+            # Fallback: if it's already a string, return as-is
+            if isinstance(tool_input, str):
+                return tool_input
+        
+        # For update operations, extract file_path if it exists
+        if normalized_tool_name == "update":
+            if isinstance(tool_input, dict):
+                # Check for file_path (Copilot format)
+                if "file_path" in tool_input:
+                    return tool_input["file_path"]
+                # Also check for relativeWorkspacePath (for consistency)
+                elif "relativeWorkspacePath" in tool_input:
+                    return tool_input["relativeWorkspacePath"]
+            elif isinstance(tool_input, str):
+                return tool_input
+        
+        # For todo operations, transform from output format to input format
+        if normalized_tool_name == "todo":
+            # Copilot stores todos in tool_output, so we need to transform it
+            if tool_output and isinstance(tool_output, dict):
+                todo_list = tool_output.get("todoList", [])
+                if isinstance(todo_list, list) and len(todo_list) > 0:
+                    # Transform todoList to the normalized format
+                    todos = []
+                    for todo_item in todo_list:
+                        if isinstance(todo_item, dict):
+                            # Copilot uses "title" for the name, "description" for description
+                            todo_name = todo_item.get("title", "")
+                            # Skip todos with empty names
+                            if todo_name and todo_name.strip():
+                                # Map status: "not-started" -> "pending", others keep as-is
+                                status = todo_item.get("status", "pending")
+                                if status == "not-started":
+                                    status = "pending"
+                                
+                                todos.append({
+                                    "name": todo_name,
+                                    "status": status
+                                })
+                    
+                    # If no valid todos, skip this tool entirely
+                    if not todos:
+                        return None
+                    
+                    # Build result (no description for Copilot todos)
+                    return {
+                        "todos": todos
+                    }
+            
+            # If tool_input has todo structure, normalize it like Cursor
+            if isinstance(tool_input, dict):
+                # Extract overview as description (skip if empty)
+                description = tool_input.get("overview", "")
+                if not description or not description.strip():
+                    description = None
+                
+                # Extract todos array and simplify (skip todos with empty names)
+                todos = []
+                todos_raw = tool_input.get("todos", [])
+                if isinstance(todos_raw, list):
+                    for todo_item in todos_raw:
+                        if isinstance(todo_item, dict):
+                            todo_name = todo_item.get("content", "")
+                            # Skip todos with empty names
+                            if todo_name and todo_name.strip():
+                                simplified_todo = {
+                                    "name": todo_name,
+                                    "status": todo_item.get("status", "")
+                                }
+                                todos.append(simplified_todo)
+                
+                # If no description and no valid todos, skip this tool entirely
+                if description is None and not todos:
+                    return None
+                
+                # Build result, only include description if it's not empty
+                result = {"todos": todos}
+                if description is not None:
+                    result["description"] = description
+                
+                return result
+        
+        # TODO: Add other Copilot-specific input normalization logic
+        return tool_input
+    
+    def _normalize_copilot_tool_output(self, tool_name: str, normalized_tool_name: str, tool_output: Any) -> Any:
+        """
+        Normalize tool output for Copilot-specific tools.
+        
+        Args:
+            tool_name: Original tool name from Copilot
+            normalized_tool_name: Normalized tool name
+            tool_output: Original tool output
+            
+        Returns:
+            Normalized tool output
+        """
+        # For web_request, always return empty output
+        if normalized_tool_name == "web_request":
+            return ""
+        
+        # For read operations, always return empty output
+        if normalized_tool_name == "read":
+            return ""
+        
+        # For create operations, always return empty output
+        if normalized_tool_name == "create":
+            return ""
+        
+        # For todo operations, always return empty output
+        if normalized_tool_name == "todo":
+            return ""
+        
+        # For terminal operations, always return empty output
+        if normalized_tool_name == "terminal":
+            return ""
+        
+        # TODO: Add other Copilot-specific output normalization logic
+        return tool_output
+    
+    def _normalize_copilot_tool_usage(self, tool_name: str, tool_input: Any, tool_output: Any) -> Optional[Dict[str, Any]]:
+        """
+        Normalize a complete tool usage entry for Copilot.
+        
+        Args:
+            tool_name: Original tool name from Copilot
+            tool_input: Original tool input
+            tool_output: Original tool output
+            
+        Returns:
+            Normalized tool usage dict with keys: tool_name, tool_input, tool_output
+            Returns None if tool should be skipped
+        """
+        # Normalize tool name using common function
+        normalized_name = tool_name_normalization("copilot", tool_name)
+        
+        if normalized_name is None:
+            return None
+        
+        # Apply Copilot-specific input/output normalization
+        # For todo and terminal, pass tool_output to input normalization since Copilot stores data in output
+        normalized_input = self._normalize_copilot_tool_input(tool_name, normalized_name, tool_input, tool_output)
+        
+        # If input normalization returns None, skip this tool entirely
+        if normalized_input is None:
+            return None
+        
+        normalized_output = self._normalize_copilot_tool_output(tool_name, normalized_name, tool_output)
+        
+        return {
+            "tool_name": normalized_name,
+            "tool_input": normalized_input,
+            "tool_output": normalized_output
+        }
 
     def _transform_chat_to_new_format(self, raw_data: Dict[str, Any], workspace_id: str, storage_root: pathlib.Path) -> Optional[Dict[str, Any]]:
         """Transform a single chat from raw format to new standardized format."""
@@ -429,20 +669,20 @@ class CopilotChatFinder(BaseChatFinder):
                             
                             tool_output = code_content or ""
                             
-                            # Increment timestamp for tool message
-                            current_time_ms += message_interval_ms
-                            tool_timestamp = self._timestamp_ms_to_iso(current_time_ms)
+                            # Normalize tool usage using Copilot-specific logic
+                            normalized = self._normalize_copilot_tool_usage("codeBlock", tool_input, tool_output)
                             
-                            messages.append({
-                                "role": "assistant",
-                                "type": "tool",
-                                "content": {
-                                    "toolName": "codeBlock",
-                                    "toolInput": tool_input,
-                                    "toolOutput": tool_output
-                                },
-                                "timestamp": tool_timestamp
-                            })
+                            if normalized:
+                                # Increment timestamp for tool message
+                                current_time_ms += message_interval_ms
+                                tool_timestamp = self._timestamp_ms_to_iso(current_time_ms)
+                                
+                                messages.append({
+                                    "role": "assistant",
+                                    "type": "tool",
+                                    "content": normalized,
+                                    "timestamp": tool_timestamp
+                                })
                         
                         continue
                     
@@ -455,20 +695,20 @@ class CopilotChatFinder(BaseChatFinder):
                                 tool_output = self._extract_tool_output(entity)
                                 tool_input = self._extract_tool_input(entity, tool_id)
                                 
-                                # Increment timestamp for tool message
-                                current_time_ms += message_interval_ms
-                                tool_timestamp = self._timestamp_ms_to_iso(current_time_ms)
+                                # Normalize tool usage using Copilot-specific logic
+                                normalized = self._normalize_copilot_tool_usage(tool_id, tool_input if tool_input else {}, tool_output)
                                 
-                                messages.append({
-                                    "role": "assistant",
-                                    "type": "tool",
-                                    "content": {
-                                        "toolName": tool_id,
-                                        "toolInput": tool_input if tool_input else {},
-                                        "toolOutput": tool_output
-                                    },
-                                    "timestamp": tool_timestamp
-                                })
+                                if normalized:
+                                    # Increment timestamp for tool message
+                                    current_time_ms += message_interval_ms
+                                    tool_timestamp = self._timestamp_ms_to_iso(current_time_ms)
+                                    
+                                    messages.append({
+                                        "role": "assistant",
+                                        "type": "tool",
+                                        "content": normalized,
+                                        "timestamp": tool_timestamp
+                                    })
                         # Skip other kinds (thinking, progressTaskSerialized, etc.)
                         i += 1
                         continue

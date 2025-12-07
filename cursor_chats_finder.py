@@ -18,6 +18,7 @@ from typing import Dict, Any, Iterable, List, Optional
 from pathlib import Path
 
 from base_chat_finder import BaseChatFinder
+from tool_normalizer import tool_name_normalization
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, 
@@ -552,10 +553,217 @@ def extract_text_from_richtext(richtext):
     
     return str(richtext) if richtext else ""
 
+def _normalize_cursor_tool_input(tool_name: str, normalized_tool_name: str, tool_input: Any) -> Any:
+    """
+    Normalize tool input for Cursor-specific tools.
+    
+    Args:
+        tool_name: Original tool name from Cursor
+        normalized_tool_name: Normalized tool name
+        tool_input: Original tool input
+        
+    Returns:
+        Normalized tool input
+    """
+    # Normalize web_search: format as object with request and optional url
+    if tool_name == "web_search" or normalized_tool_name == "web_request":
+        result = {}
+        if isinstance(tool_input, dict):
+            # Extract searchTerm as request
+            if "searchTerm" in tool_input:
+                result["request"] = tool_input["searchTerm"]
+            # Extract url if it exists
+            if "url" in tool_input:
+                result["url"] = tool_input["url"]
+        elif isinstance(tool_input, str):
+            # If it's just a string, use it as the request
+            result["request"] = tool_input
+        
+        # Return the result object (only if we have at least a request)
+        if "request" in result:
+            return result
+        return tool_input
+    
+    # General rule: if tool_input is a dict with relativeWorkspacePath, extract it
+    # (but skip this for read operations which have special handling)
+    if normalized_tool_name != "read":
+        if isinstance(tool_input, dict) and "relativeWorkspacePath" in tool_input:
+            return tool_input["relativeWorkspacePath"]
+    
+    # Normalize terminal: extract fullText from executableCommands
+    if normalized_tool_name == "terminal":
+        if isinstance(tool_input, dict):
+            # Check for parsingResult -> executableCommands structure
+            parsing_result = tool_input.get("parsingResult", {})
+            if isinstance(parsing_result, dict):
+                executable_commands = parsing_result.get("executableCommands", [])
+                if isinstance(executable_commands, list) and len(executable_commands) > 0:
+                    first_command = executable_commands[0]
+                    if isinstance(first_command, dict):
+                        full_text = first_command.get("fullText", "")
+                        if full_text:
+                            return full_text
+            # Fallback: if it's already a string, return as-is
+            if isinstance(tool_input, str):
+                return tool_input
+    
+    # Normalize todo: simplify structure
+    if normalized_tool_name == "todo":
+        if isinstance(tool_input, dict):
+            # Extract overview as description (skip if empty)
+            description = tool_input.get("overview", "")
+            if not description or not description.strip():
+                description = None
+            
+            # Extract todos array and simplify (skip todos with empty names)
+            todos = []
+            todos_raw = tool_input.get("todos", [])
+            if isinstance(todos_raw, list):
+                for todo_item in todos_raw:
+                    if isinstance(todo_item, dict):
+                        todo_name = todo_item.get("content", "")
+                        # Skip todos with empty names
+                        if todo_name and todo_name.strip():
+                            simplified_todo = {
+                                "name": todo_name,
+                                "status": todo_item.get("status", "")
+                            }
+                            todos.append(simplified_todo)
+            
+            # If no description and no valid todos, skip this tool entirely
+            if description is None and not todos:
+                return None
+            
+            # Build result, only include description if it's not empty
+            result = {"todos": todos}
+            if description is not None:
+                result["description"] = description
+            
+            return result
+    
+    # For create and update operations, extract relativeWorkspacePath if it exists
+    if normalized_tool_name in ["create", "update"]:
+        if isinstance(tool_input, dict) and "relativeWorkspacePath" in tool_input:
+            return tool_input["relativeWorkspacePath"]
+        elif isinstance(tool_input, str):
+            return tool_input
+    
+    # For read operations - always return an array
+    if normalized_tool_name == "read":
+        if isinstance(tool_input, dict):
+            # Check if it has codeResults structure (codebase_search result)
+            if "codeResults" in tool_input and isinstance(tool_input["codeResults"], list):
+                # Extract relativeWorkspacePath from each codeBlock
+                file_paths = []
+                for code_result in tool_input["codeResults"]:
+                    if isinstance(code_result, dict):
+                        code_block = code_result.get("codeBlock")
+                        if isinstance(code_block, dict):
+                            relative_path = code_block.get("relativeWorkspacePath")
+                            if relative_path:
+                                file_paths.append(relative_path)
+                if file_paths:
+                    return file_paths
+            
+            # Check if it has path (grep/search operations)
+            elif "path" in tool_input:
+                path_value = tool_input["path"]
+                # Return as array
+                return [path_value] if path_value else []
+            
+            # Check if it has targetFile (simple read_file)
+            elif "targetFile" in tool_input:
+                target_file = tool_input["targetFile"]
+                # Return as array
+                return [target_file] if target_file else []
+        
+        # If it's already a string, wrap in array
+        elif isinstance(tool_input, str):
+            return [tool_input] if tool_input else []
+        
+        # If it's already a list, return as-is
+        elif isinstance(tool_input, list):
+            return tool_input
+    
+    # TODO: Add other Cursor-specific input normalization logic
+    return tool_input
+
+
+def _normalize_cursor_tool_output(tool_name: str, normalized_tool_name: str, tool_output: Any) -> Any:
+    """
+    Normalize tool output for Cursor-specific tools.
+    
+    Args:
+        tool_name: Original tool name from Cursor
+        normalized_tool_name: Normalized tool name
+        tool_output: Original tool output
+        
+    Returns:
+        Normalized tool output
+    """
+    # For web_request, always return empty output
+    if normalized_tool_name == "web_request":
+        return ""
+    
+    # For read operations, always return empty output
+    if normalized_tool_name == "read":
+        return ""
+    
+    # For todo operations, always return empty output
+    if normalized_tool_name == "todo":
+        return ""
+    
+    # For terminal operations, always return empty output
+    if normalized_tool_name == "terminal":
+        return ""
+    
+    # For create operations, always return empty output
+    if normalized_tool_name == "create":
+        return ""
+    
+    # TODO: Add other Cursor-specific output normalization logic
+    return tool_output
+
+
+def _normalize_cursor_tool_usage(tool_name: str, tool_input: Any, tool_output: Any) -> Optional[Dict[str, Any]]:
+    """
+    Normalize a complete tool usage entry for Cursor.
+    
+    Args:
+        tool_name: Original tool name from Cursor
+        tool_input: Original tool input
+        tool_output: Original tool output
+        
+    Returns:
+        Normalized tool usage dict with keys: tool_name, tool_input, tool_output
+        Returns None if tool should be skipped
+    """
+    # Normalize tool name using common function
+    normalized_name = tool_name_normalization("cursor", tool_name)
+    
+    if normalized_name is None:
+        return None
+    
+    # Apply Cursor-specific input/output normalization
+    normalized_input = _normalize_cursor_tool_input(tool_name, normalized_name, tool_input)
+    
+    # If input normalization returns None, skip this tool entirely
+    if normalized_input is None:
+        return None
+    
+    normalized_output = _normalize_cursor_tool_output(tool_name, normalized_name, tool_output)
+    
+    return {
+        "tool_name": normalized_name,
+        "tool_input": normalized_input,
+        "tool_output": normalized_output
+    }
+
+
 def extract_tool_info(bubble):
     """Extract tool usage information from a bubble.
     
-    Returns dict with toolName, toolInput, toolOutput if tool usage is found, None otherwise.
+    Returns dict with tool_name, tool_input, tool_output if tool usage is found, None otherwise.
     """
     # Check toolFormerData first (primary location for tool usage)
     tool_data = bubble.get("toolFormerData")
@@ -591,11 +799,9 @@ def extract_tool_info(bubble):
             elif not isinstance(tool_output, str):
                 tool_output = str(tool_output)
             
-            return {
-                "toolName": tool_name,
-                "toolInput": tool_input,
-                "toolOutput": tool_output
-            }
+            # Normalize tool usage using Cursor-specific logic
+            normalized = _normalize_cursor_tool_usage(tool_name, tool_input, tool_output)
+            return normalized
     
     # Check for legacy tool fields
     if bubble.get("tool"):
@@ -604,11 +810,9 @@ def extract_tool_info(bubble):
         tool_output = bubble.get("toolOutput") or bubble.get("tool_output") or bubble.get("tool_response", "")
         
         if tool_name:
-            return {
-                "toolName": tool_name,
-                "toolInput": tool_input if isinstance(tool_input, dict) else {"raw": str(tool_input)},
-                "toolOutput": str(tool_output) if tool_output else ""
-            }
+            # Normalize tool usage using Cursor-specific logic
+            normalized = _normalize_cursor_tool_usage(tool_name, tool_input, tool_output)
+            return normalized
     
     return None
 
@@ -1428,14 +1632,14 @@ def transform_chat_to_export_format(chat: Dict[str, Any]) -> Dict[str, Any]:
         
         # Build message object based on type
         if msg_type == "tool" and isinstance(content, dict):
-            # Tool message - preserve structure matching Claude format
+            # Tool message - use normalized format
             message_obj = {
                 "role": role,
                 "type": "tool",
                 "content": {
-                    "toolName": content.get("toolName", "unknown"),
-                    "toolInput": content.get("toolInput", {}),
-                    "toolOutput": content.get("toolOutput", "")
+                    "tool_name": content.get("tool_name", "unknown"),
+                    "tool_input": content.get("tool_input", {}),
+                    "tool_output": content.get("tool_output", "")
                 },
                 "timestamp": msg_timestamp
             }
