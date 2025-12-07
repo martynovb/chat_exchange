@@ -159,4 +159,11 @@ class TestBaseChatFinder:
         assert isinstance(result, dict)
         assert "title" in result
         assert "messages" in result
+    
+    def test_get_timezone_offset_exception(self):
+        """Test _get_timezone_offset exception handling."""
+        finder = ConcreteChatFinder()
+        with patch('time.timezone', side_effect=Exception("Test error")):
+            result = finder._get_timezone_offset()
+            assert result == "UTC+0"
 

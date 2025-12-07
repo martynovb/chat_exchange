@@ -27,9 +27,26 @@ pytest tests/test_base_chat_finder.py
 
 ### Run with Coverage
 
+Coverage is automatically enabled when running pytest. The configuration is set up in `pytest.ini` and `.coveragerc`.
+
 ```bash
-pytest --cov=. --cov-report=html
+# Run tests with coverage (default - shows terminal report)
+pytest
+
+# Run with coverage and open HTML report
+python run_coverage.py --html
+
+# Run with minimum coverage requirement (fails if below threshold)
+python run_coverage.py --min=80
+
+# Or use pytest directly with custom options
+pytest --cov=. --cov-report=html --cov-report=term-missing
 ```
+
+Coverage reports are generated in:
+- Terminal output (with missing line indicators)
+- `htmlcov/index.html` (HTML report)
+- `coverage.xml` (XML report for CI/CD)
 
 ### Run Verbose
 

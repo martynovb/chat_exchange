@@ -273,16 +273,341 @@ class TestClaudeChatFinder:
     def test_parse_chat_full_jsonl(self):
         """Test parsing full chat from JSONL file."""
         finder = ClaudeChatFinder()
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.jsonl', delete=False) as f:
-            f.write('{"type": "user", "message": {"content": "Hello"}}\n')
-            f.write('{"type": "assistant", "message": {"content": "Hi there"}}\n')
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project_dir = pathlib.Path(tmpdir) / "project1"
+            project_dir.mkdir()
+            jsonl_file = project_dir / "chat.jsonl"
+            jsonl_file.write_text('{"type": "user", "message": {"content": "Hello"}, "timestamp": "2024-01-01T12:00:00Z"}\n{"type": "assistant", "message": {"content": [{"type": "text", "text": "Hi there"}]}, "timestamp": "2024-01-01T12:00:10Z"}\n')
+            
+            result = finder._parse_chat_full(jsonl_file)
+            assert result is not None
+            assert isinstance(result, dict)
+            assert "title" in result
+            assert "messages" in result
+            assert "metadata" in result
+            assert len(result["messages"]) > 0
+            
+    def test_parse_chat_full_json(self):
+        """Test parsing full chat from JSON file."""
+        finder = ClaudeChatFinder()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project_dir = pathlib.Path(tmpdir) / "project1"
+            project_dir.mkdir()
+            json_file = project_dir / "chat.json"
+            json_file.write_text(json.dumps([{"type": "user", "message": {"content": "Hello"}, "timestamp": "2024-01-01T12:00:00Z"}]))
+            
+            result = finder._parse_chat_full(json_file)
+            assert result is not None
+            assert isinstance(result, dict)
+    
+    def test_parse_chat_full_invalid_path(self):
+        """Test parsing chat with invalid path."""
+        finder = ClaudeChatFinder()
+        result = finder._parse_chat_full("not_a_path")
+        assert result is None
+    
+    def test_transform_messages_user(self):
+        """Test transforming user messages."""
+        finder = ClaudeChatFinder()
+        data = [{
+            "type": "user",
+            "message": {"content": "Hello"},
+            "timestamp": "2024-01-01T12:00:00Z"
+        }]
+        messages = finder._transform_messages(data)
+        assert len(messages) == 1
+        assert messages[0]["role"] == "user"
+        assert messages[0]["content"] == "Hello"
+    
+    def test_transform_messages_assistant_text(self):
+        """Test transforming assistant text messages."""
+        finder = ClaudeChatFinder()
+        data = [{
+            "type": "assistant",
+            "message": {"content": [{"type": "text", "text": "Hi there"}]},
+            "timestamp": "2024-01-01T12:00:00Z"
+        }]
+        messages = finder._transform_messages(data)
+        assert len(messages) == 1
+        assert messages[0]["role"] == "assistant"
+        assert messages[0]["type"] == "text"
+        assert messages[0]["content"] == "Hi there"
+    
+    def test_transform_messages_tool_use(self):
+        """Test transforming tool use messages."""
+        finder = ClaudeChatFinder()
+        data = [
+            {
+                "type": "user",
+                "message": {"content": [{"type": "tool_result", "tool_use_id": "tool_123", "content": "Result"}]},
+                "timestamp": "2024-01-01T12:00:00Z"
+            },
+            {
+                "type": "assistant",
+                "message": {"content": [{"type": "tool_use", "id": "tool_123", "name": "test_tool", "input": {}}]},
+                "timestamp": "2024-01-01T12:00:05Z"
+            }
+        ]
+        messages = finder._transform_messages(data)
+        # Should have one tool message
+        tool_messages = [m for m in messages if m.get("type") == "tool"]
+        assert len(tool_messages) == 1
+        assert tool_messages[0]["content"]["toolName"] == "test_tool"
+    
+    def test_transform_messages_skip_file_history(self):
+        """Test that file-history-snapshot entries are skipped."""
+        finder = ClaudeChatFinder()
+        data = [
+            {"type": "file-history-snapshot", "data": "..."},
+            {"type": "user", "message": {"content": "Hello"}, "timestamp": "2024-01-01T12:00:00Z"}
+        ]
+        messages = finder._transform_messages(data)
+        assert len(messages) == 1
+        assert messages[0]["role"] == "user"
+    
+    def test_transform_chat_to_export_format(self):
+        """Test transforming chat to export format."""
+        finder = ClaudeChatFinder()
+        data = [
+            {"type": "user", "message": {"content": "Hello"}, "timestamp": "2024-01-01T12:00:00Z"},
+            {"type": "assistant", "message": {"content": [{"type": "text", "text": "Hi"}], "model": "claude-sonnet-4-20250514"}, "timestamp": "2024-01-01T12:00:10Z"}
+        ]
+        result = finder._transform_chat_to_export_format(data, "project1", "chat.jsonl")
+        assert "title" in result
+        assert "metadata" in result
+        assert "createdAt" in result
+        assert "messages" in result
+        assert result["metadata"]["model"] == "Claude Sonnet 4.0"
+        assert result["metadata"]["Project"] == "project1"
+    
+    def test_transform_chat_to_export_format_no_timestamp(self):
+        """Test transforming chat without timestamp."""
+        finder = ClaudeChatFinder()
+        data = [{"type": "user", "message": {"content": "Hello"}}]
+        result = finder._transform_chat_to_export_format(data, "project1", "chat.jsonl")
+        assert "createdAt" in result
+        assert result["createdAt"] is not None
+    
+    def test_export_chats_empty(self):
+        """Test exporting chats when no files found."""
+        finder = ClaudeChatFinder()
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            f.close()
+            output_path = pathlib.Path(f.name)
+            
+            with patch.object(finder, 'find_all_chat_files', return_value=[]):
+                result = finder.export_chats(output_path)
+                assert result == []
+                assert output_path.exists()
+                data = json.loads(output_path.read_text())
+                assert data == []
+            
+            output_path.unlink()
+    
+    def test_export_chats_with_files(self):
+        """Test exporting chats with actual files."""
+        finder = ClaudeChatFinder()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project_dir = pathlib.Path(tmpdir) / "project1"
+            project_dir.mkdir()
+            jsonl_file = project_dir / "chat.jsonl"
+            jsonl_file.write_text('{"type": "user", "message": {"content": "Hello"}, "timestamp": "2024-01-01T12:00:00Z"}\n')
+            
+            output_path = pathlib.Path(tmpdir) / "output.json"
+            
+            with patch.object(finder, 'get_storage_root', return_value=pathlib.Path(tmpdir)):
+                result = finder.export_chats(output_path)
+                assert len(result) == 1
+                assert output_path.exists()
+                data = json.loads(output_path.read_text())
+                assert len(data) == 1
+    
+    def test_extract_metadata_lightweight_with_json(self):
+        """Test extracting metadata from JSON file."""
+        finder = ClaudeChatFinder()
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            json_data = [{"type": "user", "message": {"content": "Hello"}, "timestamp": "2024-01-01T12:00:00Z"}]
+            json.dump(json_data, f)
             f.flush()
             f.close()
             
-            result = finder._parse_chat_full(pathlib.Path(f.name))
-            # Should return None or a dict, depending on implementation
-            # The method may return None if transformation fails
-            assert result is None or isinstance(result, dict)
+            result = finder._extract_metadata_lightweight(pathlib.Path(f.name))
+            assert result is not None
+            assert "id" in result
+            assert "title" in result
+            assert "date" in result
+            
+            pathlib.Path(f.name).unlink()
+    
+    def test_extract_metadata_lightweight_fallback_to_filename(self):
+        """Test that metadata falls back to filename when no title found."""
+        finder = ClaudeChatFinder()
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.jsonl', delete=False) as f:
+            f.write('{"type": "system", "message": {"content": "system message"}}\n')
+            f.flush()
+            f.close()
+            
+            result = finder._extract_metadata_lightweight(pathlib.Path(f.name))
+            assert result is not None
+            assert result["title"] != "Untitled Conversation"  # Should use filename stem
+    
+    def test_extract_metadata_lightweight_fallback_to_mtime(self):
+        """Test that metadata falls back to file modification time."""
+        finder = ClaudeChatFinder()
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.jsonl', delete=False) as f:
+            f.write('{"type": "system", "message": {"content": "system"}}\n')
+            f.flush()
+            f.close()
+            
+            result = finder._extract_metadata_lightweight(pathlib.Path(f.name))
+            assert result is not None
+            assert "date" in result
+            assert result["date"]  # Should have a date
+            
+            pathlib.Path(f.name).unlink()
+    
+    def test_transform_messages_tool_use_with_tool_use_result(self):
+        """Test transforming tool use with toolUseResult."""
+        finder = ClaudeChatFinder()
+        data = [
+            {
+                "type": "user",
+                "message": {"content": [{"type": "tool_result", "tool_use_id": "tool_123", "content": "Result"}]},
+                "timestamp": "2024-01-01T12:00:00Z",
+                "toolUseResult": {"stdout": "Tool output", "stderr": ""}
+            },
+            {
+                "type": "assistant",
+                "message": {"content": [{"type": "tool_use", "id": "tool_123", "name": "test_tool", "input": {}}]},
+                "timestamp": "2024-01-01T12:00:05Z"
+            }
+        ]
+        messages = finder._transform_messages(data)
+        tool_messages = [m for m in messages if m.get("type") == "tool"]
+        assert len(tool_messages) == 1
+        assert tool_messages[0]["content"]["toolOutput"] == "Tool output"
+    
+    def test_transform_messages_tool_use_with_stderr(self):
+        """Test transforming tool use with stderr output."""
+        finder = ClaudeChatFinder()
+        data = [
+            {
+                "type": "user",
+                "message": {"content": [{"type": "tool_result", "tool_use_id": "tool_123"}]},
+                "timestamp": "2024-01-01T12:00:00Z",
+                "toolUseResult": {"stdout": "", "stderr": "Error message"}
+            },
+            {
+                "type": "assistant",
+                "message": {"content": [{"type": "tool_use", "id": "tool_123", "name": "test_tool", "input": {}}]},
+                "timestamp": "2024-01-01T12:00:05Z"
+            }
+        ]
+        messages = finder._transform_messages(data)
+        tool_messages = [m for m in messages if m.get("type") == "tool"]
+        assert len(tool_messages) == 1
+        assert tool_messages[0]["content"]["toolOutput"] == "Error message"
+    
+    def test_transform_messages_skip_thinking(self):
+        """Test that thinking blocks are skipped."""
+        finder = ClaudeChatFinder()
+        data = [
+            {
+                "type": "assistant",
+                "message": {"content": [{"type": "thinking", "text": "..."}, {"type": "text", "text": "Hello"}]},
+                "timestamp": "2024-01-01T12:00:00Z"
+            }
+        ]
+        messages = finder._transform_messages(data)
+        assert len(messages) == 1
+        assert messages[0]["content"] == "Hello"
+    
+    def test_transform_messages_empty_text_content(self):
+        """Test that messages with empty text content are skipped."""
+        finder = ClaudeChatFinder()
+        data = [
+            {"type": "user", "message": {"content": ""}, "timestamp": "2024-01-01T12:00:00Z"},
+            {"type": "user", "message": {"content": "   "}, "timestamp": "2024-01-01T12:00:00Z"}
+        ]
+        messages = finder._transform_messages(data)
+        assert len(messages) == 0
+    
+    def test_transform_chat_to_export_format_different_models(self):
+        """Test transforming chat with different model names."""
+        finder = ClaudeChatFinder()
+        data = [
+            {"type": "assistant", "message": {"content": [], "model": "claude-sonnet-3-20240229"}, "timestamp": "2024-01-01T12:00:00Z"}
+        ]
+        result = finder._transform_chat_to_export_format(data, "project1", "chat.jsonl")
+        assert result["metadata"]["model"] == "Claude Sonnet 3.5"
+        
+        data2 = [
+            {"type": "assistant", "message": {"content": [], "model": "claude-opus-20240229"}, "timestamp": "2024-01-01T12:00:00Z"}
+        ]
+        result2 = finder._transform_chat_to_export_format(data2, "project1", "chat.jsonl")
+        assert result2["metadata"]["model"] == "Claude Opus"
+    
+    def test_export_chats_skip_invalid_files(self):
+        """Test that export_chats skips files that can't be parsed."""
+        finder = ClaudeChatFinder()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project_dir = pathlib.Path(tmpdir) / "project1"
+            project_dir.mkdir()
+            jsonl_file = project_dir / "chat.jsonl"
+            jsonl_file.write_text('invalid json\n')
+            
+            output_path = pathlib.Path(tmpdir) / "output.json"
+            
+            with patch.object(finder, 'get_storage_root', return_value=pathlib.Path(tmpdir)):
+                result = finder.export_chats(output_path)
+                # Should skip invalid file
+                assert len(result) == 0
+    
+    def test_transform_chat_to_export_format_haiku_model(self):
+        """Test transforming chat with Haiku model."""
+        finder = ClaudeChatFinder()
+        data = [
+            {"type": "assistant", "message": {"content": [], "model": "claude-haiku-20240307"}, "timestamp": "2024-01-01T12:00:00Z"}
+        ]
+        result = finder._transform_chat_to_export_format(data, "project1", "chat.jsonl")
+        assert result["metadata"]["model"] == "Claude Haiku"
+    
+    def test_transform_chat_to_export_format_opus_model(self):
+        """Test transforming chat with Opus model."""
+        finder = ClaudeChatFinder()
+        data = [
+            {"type": "assistant", "message": {"content": [], "model": "claude-opus-20240229"}, "timestamp": "2024-01-01T12:00:00Z"}
+        ]
+        result = finder._transform_chat_to_export_format(data, "project1", "chat.jsonl")
+        assert result["metadata"]["model"] == "Claude Opus"
+    
+    def test_extract_metadata_lightweight_json_with_timestamp(self):
+        """Test extracting metadata from JSON file with timestamp."""
+        finder = ClaudeChatFinder()
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            json_data = [{"type": "user", "message": {"content": "Hello"}, "timestamp": "2024-01-01T12:00:00Z"}]
+            json.dump(json_data, f)
+            f.flush()
+            f.close()
+            
+            result = finder._extract_metadata_lightweight(pathlib.Path(f.name))
+            assert result is not None
+            assert "2024-01-01" in result["date"]
+            
+            pathlib.Path(f.name).unlink()
+    
+    def test_extract_metadata_lightweight_long_title(self):
+        """Test extracting metadata with long title that gets truncated."""
+        finder = ClaudeChatFinder()
+        long_title = "A" * 150
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.jsonl', delete=False) as f:
+            f.write(f'{{"type": "user", "message": {{"content": "{long_title}"}}, "timestamp": "2024-01-01T12:00:00Z"}}\n')
+            f.flush()
+            f.close()
+            
+            result = finder._extract_metadata_lightweight(pathlib.Path(f.name))
+            assert result is not None
+            assert len(result["title"]) <= 103  # 100 chars + "..."
             
             pathlib.Path(f.name).unlink()
 

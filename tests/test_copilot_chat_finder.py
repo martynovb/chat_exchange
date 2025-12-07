@@ -302,12 +302,381 @@ class TestCopilotChatFinder:
                 "sessionId": "12345",
                 "customTitle": "Test Chat",
                 "creationDate": 1609459200000,
-                "messages": []
+                "requests": [{
+                    "message": {"text": "Hello"},
+                    "response": [{"value": "Hi there"}]
+                }]
             }
             json.dump(chat_data, chat_file.open('w'))
             
             with patch.object(finder, 'get_storage_root', return_value=storage_path):
                 result = finder._parse_chat_full(chat_file)
-                # May return None if transformation fails, or a dict if successful
-                assert result is None or isinstance(result, dict)
+                # Should return a dict with messages
+                assert result is not None
+                assert isinstance(result, dict)
+                assert "messages" in result
+                assert len(result["messages"]) > 0
+    
+    def test_parse_chat_full_no_storage(self):
+        """Test parsing chat when storage root is None."""
+        finder = CopilotChatFinder()
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            json.dump({"sessionId": "123"}, f)
+            f.flush()
+            f.close()
+            
+            with patch.object(finder, 'get_storage_root', return_value=None):
+                result = finder._parse_chat_full(pathlib.Path(f.name))
+                assert result is None
+            
+            pathlib.Path(f.name).unlink()
+    
+    def test_parse_chat_full_invalid_path(self):
+        """Test parsing chat with invalid path."""
+        finder = CopilotChatFinder()
+        result = finder._parse_chat_full("not_a_path")
+        assert result is None
+    
+    def test_extract_metadata_lightweight(self):
+        """Test extracting metadata from chat file."""
+        finder = CopilotChatFinder()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            storage_path = pathlib.Path(tmpdir)
+            workspace_dir = storage_path / "workspace1"
+            workspace_dir.mkdir()
+            chat_dir = workspace_dir / "chatSessions"
+            chat_dir.mkdir()
+            
+            chat_file = chat_dir / "chat1.json"
+            chat_data = {
+                "sessionId": "12345",
+                "customTitle": "Test Chat",
+                "creationDate": 1609459200000
+            }
+            json.dump(chat_data, chat_file.open('w'))
+            
+            result = finder._extract_metadata_lightweight(chat_file)
+            assert result is not None
+            assert result["title"] == "Test Chat"
+            assert "2021-01-01" in result["date"]
+    
+    def test_extract_metadata_lightweight_no_title(self):
+        """Test extracting metadata when no custom title."""
+        finder = CopilotChatFinder()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            storage_path = pathlib.Path(tmpdir)
+            workspace_dir = storage_path / "workspace1"
+            workspace_dir.mkdir()
+            chat_dir = workspace_dir / "chatSessions"
+            chat_dir.mkdir()
+            
+            chat_file = chat_dir / "chat1.json"
+            chat_data = {
+                "sessionId": "12345678",
+                "creationDate": 1609459200000
+            }
+            json.dump(chat_data, chat_file.open('w'))
+            
+            result = finder._extract_metadata_lightweight(chat_file)
+            assert result is not None
+            assert "Chat 12345678" in result["title"]
+    
+    def test_transform_chat_to_new_format(self):
+        """Test transforming chat to new format."""
+        finder = CopilotChatFinder()
+        raw_data = {
+            "sessionId": "12345",
+            "customTitle": "Test Chat",
+            "creationDate": 1609459200000,
+            "responderUsername": "GitHub Copilot",
+            "requests": [{
+                "message": {"text": "Hello"},
+                "response": [{"value": "Hi there"}]
+            }]
+        }
+        
+        with tempfile.TemporaryDirectory() as tmpdir:
+            storage_path = pathlib.Path(tmpdir)
+            workspace_dir = storage_path / "workspace1"
+            workspace_dir.mkdir()
+            workspace_json = workspace_dir / "workspace.json"
+            json.dump({"folder": "file:///C:/Users/test/myproject"}, workspace_json.open('w'))
+            
+            result = finder._transform_chat_to_new_format(raw_data, "workspace1", storage_path)
+            assert result is not None
+            assert result["title"] == "Test Chat"
+            assert "messages" in result
+            assert len(result["messages"]) > 0
+            assert result["metadata"]["Project"] == "myproject"
+    
+    def test_transform_chat_to_new_format_no_messages(self):
+        """Test transforming chat with no messages."""
+        finder = CopilotChatFinder()
+        raw_data = {
+            "sessionId": "12345",
+            "creationDate": 1609459200000,
+            "requests": []
+        }
+        
+        with tempfile.TemporaryDirectory() as tmpdir:
+            storage_path = pathlib.Path(tmpdir)
+            workspace_dir = storage_path / "workspace1"
+            workspace_dir.mkdir()
+            
+            result = finder._transform_chat_to_new_format(raw_data, "workspace1", storage_path)
+            assert result is None  # Should return None when no messages
+    
+    def test_transform_chat_to_new_format_with_code_block(self):
+        """Test transforming chat with code blocks."""
+        finder = CopilotChatFinder()
+        raw_data = {
+            "sessionId": "12345",
+            "creationDate": 1609459200000,
+            "requests": [{
+                "message": {"text": "Show me code"},
+                "response": [
+                    {"value": "```"},
+                    {"kind": "codeblockUri", "uri": {"fsPath": "/path/to/file.py"}},
+                    {"kind": "textEditGroup", "edits": [[{"text": "print('hello')"}]], "value": ""},
+                    {"value": "```"}
+                ]
+            }]
+        }
+        
+        with tempfile.TemporaryDirectory() as tmpdir:
+            storage_path = pathlib.Path(tmpdir)
+            workspace_dir = storage_path / "workspace1"
+            workspace_dir.mkdir()
+            
+            result = finder._transform_chat_to_new_format(raw_data, "workspace1", storage_path)
+            assert result is not None
+            # Should have tool message for code block
+            tool_messages = [m for m in result["messages"] if m.get("type") == "tool"]
+            assert len(tool_messages) > 0
+    
+    def test_transform_chat_to_new_format_with_tool_invocation(self):
+        """Test transforming chat with tool invocations."""
+        finder = CopilotChatFinder()
+        raw_data = {
+            "sessionId": "12345",
+            "creationDate": 1609459200000,
+            "requests": [{
+                "message": {"text": "Search files"},
+                "response": [{
+                    "kind": "toolInvocationSerialized",
+                    "toolId": "copilot_findFiles",
+                    "invocationMessage": {"value": "Searching for `*.py`"},
+                    "toolSpecificData": "file1.py, file2.py"
+                }]
+            }]
+        }
+        
+        with tempfile.TemporaryDirectory() as tmpdir:
+            storage_path = pathlib.Path(tmpdir)
+            workspace_dir = storage_path / "workspace1"
+            workspace_dir.mkdir()
+            
+            result = finder._transform_chat_to_new_format(raw_data, "workspace1", storage_path)
+            assert result is not None
+            tool_messages = [m for m in result["messages"] if m.get("type") == "tool"]
+            assert len(tool_messages) > 0
+            assert tool_messages[0]["content"]["toolName"] == "copilot_findFiles"
+    
+    def test_extract_tool_input(self):
+        """Test extracting tool input."""
+        finder = CopilotChatFinder()
+        tool_invocation = {
+            "invocationMessage": {
+                "value": "Searching for files matching `**/*.py`",
+                "uris": {
+                    "uri1": {"fsPath": "/path/to/file1.py"},
+                    "uri2": {"fsPath": "/path/to/file2.py"}
+                }
+            }
+        }
+        result = finder._extract_tool_input(tool_invocation, "copilot_findFiles")
+        assert "query" in result
+        assert "files" in result
+    
+    def test_extract_tool_output(self):
+        """Test extracting tool output."""
+        finder = CopilotChatFinder()
+        tool_invocation = {
+            "toolSpecificData": "Result data"
+        }
+        result = finder._extract_tool_output(tool_invocation)
+        assert result == "Result data"
+    
+    def test_extract_tool_output_past_tense(self):
+        """Test extracting tool output from pastTenseMessage."""
+        finder = CopilotChatFinder()
+        tool_invocation = {
+            "pastTenseMessage": {"value": "Found files"}
+        }
+        result = finder._extract_tool_output(tool_invocation)
+        assert result == "Found files"
+    
+    def test_convert_inline_reference_to_markdown(self):
+        """Test converting inline reference to markdown."""
+        finder = CopilotChatFinder()
+        inline_ref = {
+            "fsPath": "/path/to/file.py"
+        }
+        result = finder._convert_inline_reference_to_markdown(inline_ref)
+        assert result == "`/path/to/file.py`"
+    
+    def test_export_chats(self):
+        """Test exporting all chats."""
+        finder = CopilotChatFinder()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            storage_path = pathlib.Path(tmpdir)
+            workspace_dir = storage_path / "workspace1"
+            workspace_dir.mkdir()
+            chat_dir = workspace_dir / "chatSessions"
+            chat_dir.mkdir()
+            
+            chat_file = chat_dir / "chat1.json"
+            chat_data = {
+                "sessionId": "12345",
+                "customTitle": "Test Chat",
+                "creationDate": 1609459200000,
+                "requests": [{
+                    "message": {"text": "Hello"},
+                    "response": [{"value": "Hi"}]
+                }]
+            }
+            json.dump(chat_data, chat_file.open('w'))
+            
+            output_path = pathlib.Path(tmpdir) / "output.json"
+            
+            with patch.object(finder, 'get_storage_root', return_value=storage_path):
+                result = finder.export_chats(output_path)
+                assert len(result) == 1
+                assert output_path.exists()
+                data = json.loads(output_path.read_text())
+                assert len(data) == 1
+    
+    def test_export_chats_empty(self):
+        """Test exporting chats when no files found."""
+        finder = CopilotChatFinder()
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            f.close()
+            output_path = pathlib.Path(f.name)
+            
+            with patch.object(finder, 'find_all_chat_files', return_value=[]), \
+                 patch.object(finder, 'get_storage_root', return_value=None):
+                result = finder.export_chats(output_path)
+                assert result == []
+                assert output_path.exists()
+            
+            output_path.unlink()
+    
+    def test_extract_tool_input_with_result_details(self):
+        """Test extracting tool input from resultDetails."""
+        finder = CopilotChatFinder()
+        tool_invocation = {
+            "resultDetails": [
+                {"fsPath": "/path/to/file1.py"},
+                {"path": "/path/to/file2.py"}
+            ]
+        }
+        result = finder._extract_tool_input(tool_invocation, "test_tool")
+        assert "files" in result
+        assert len(result["files"]) == 2
+    
+    def test_extract_tool_input_single_file(self):
+        """Test extracting tool input with single file."""
+        finder = CopilotChatFinder()
+        tool_invocation = {
+            "resultDetails": [{"fsPath": "/path/to/file.py"}]
+        }
+        result = finder._extract_tool_input(tool_invocation, "test_tool")
+        assert "files" in result
+        assert result["files"] == "/path/to/file.py"  # Single file, not list
+    
+    def test_extract_tool_input_with_uris(self):
+        """Test extracting tool input from uris."""
+        finder = CopilotChatFinder()
+        tool_invocation = {
+            "invocationMessage": {
+                "uris": {
+                    "uri1": {"fsPath": "/path/to/file1.py"},
+                    "uri2": {"path": "/path/to/file2.py"}
+                }
+            }
+        }
+        result = finder._extract_tool_input(tool_invocation, "test_tool")
+        assert "files" in result
+        assert len(result["files"]) == 2
+    
+    def test_extract_file_path_from_inline_reference_location_uri(self):
+        """Test extracting file path from inline reference with location.uri."""
+        finder = CopilotChatFinder()
+        inline_ref = {
+            "location": {
+                "uri": {
+                    "fsPath": "/path/to/file.py"
+                }
+            }
+        }
+        result = finder._extract_file_path_from_inline_reference(inline_ref)
+        assert result == "/path/to/file.py"
+    
+    def test_convert_inline_reference_to_markdown_with_name(self):
+        """Test converting inline reference using name when no path."""
+        finder = CopilotChatFinder()
+        inline_ref = {
+            "name": "file.py"
+        }
+        result = finder._convert_inline_reference_to_markdown(inline_ref)
+        assert result == "`file.py`"
+    
+    def test_transform_chat_to_new_format_with_inline_reference(self):
+        """Test transforming chat with inline references."""
+        finder = CopilotChatFinder()
+        raw_data = {
+            "sessionId": "12345",
+            "creationDate": 1609459200000,
+            "requests": [{
+                "response": [
+                    {"value": "Here's the code"},
+                    {"kind": "inlineReference", "inlineReference": {"fsPath": "/path/to/file.py"}},
+                    {"value": " in this file"}
+                ]
+            }]
+        }
+        
+        with tempfile.TemporaryDirectory() as tmpdir:
+            storage_path = pathlib.Path(tmpdir)
+            workspace_dir = storage_path / "workspace1"
+            workspace_dir.mkdir()
+            
+            result = finder._transform_chat_to_new_format(raw_data, "workspace1", storage_path)
+            assert result is not None
+            # Should combine text and inline reference
+            text_messages = [m for m in result["messages"] if m.get("type") == "text"]
+            assert len(text_messages) > 0
+            # Check that inline reference is included in the message
+            content = text_messages[0]["content"]
+            assert "/path/to/file.py" in content or "`/path/to/file.py`" in content or "file.py" in content
+    
+    def test_export_chats_skip_invalid_files(self):
+        """Test that export_chats skips files that can't be parsed."""
+        finder = CopilotChatFinder()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            storage_path = pathlib.Path(tmpdir)
+            workspace_dir = storage_path / "workspace1"
+            workspace_dir.mkdir()
+            chat_dir = workspace_dir / "chatSessions"
+            chat_dir.mkdir()
+            
+            chat_file = chat_dir / "chat1.json"
+            chat_file.write_text('invalid json')
+            
+            output_path = pathlib.Path(tmpdir) / "output.json"
+            
+            with patch.object(finder, 'get_storage_root', return_value=storage_path):
+                result = finder.export_chats(output_path)
+                # Should skip invalid file
+                assert len(result) == 0
 
