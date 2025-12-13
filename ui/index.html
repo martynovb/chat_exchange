@@ -213,6 +213,494 @@
             font-size: 48px;
             margin-bottom: 20px;
         }
+
+        /* Authentication styles */
+        .auth-section {
+            padding: 20px;
+            background: #34495e;
+            border-bottom: 1px solid #2c3e50;
+        }
+
+        .auth-container {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .auth-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .auth-tab {
+            flex: 1;
+            padding: 10px;
+            background: #2c3e50;
+            color: white;
+            border: none;
+            border-radius: 4px 4px 0 0;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+        .auth-tab.active {
+            background: #3498db;
+        }
+
+        .auth-tab:hover {
+            background: #2980b9;
+        }
+
+        .auth-form {
+            display: none;
+            background: white;
+            padding: 20px;
+            border-radius: 0 0 8px 8px;
+        }
+
+        .auth-form.active {
+            display: block;
+        }
+
+        .auth-form-group {
+            margin-bottom: 15px;
+        }
+
+        .auth-form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .auth-form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        .auth-form-group input:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .auth-button {
+            width: 100%;
+            padding: 12px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .auth-button:hover {
+            background: #2980b9;
+        }
+
+        .auth-button:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+
+        .auth-error {
+            color: #e74c3c;
+            font-size: 12px;
+            margin-top: 5px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            background: #fee;
+            padding: 8px;
+            border-radius: 4px;
+            border-left: 3px solid #e74c3c;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+        }
+
+        .user-info {
+            display: none;
+            background: white;
+            padding: 15px 20px;
+            border-radius: 0 0 8px 8px;
+            text-align: center;
+        }
+
+        .user-info.active {
+            display: block;
+        }
+
+        .user-info-text {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .user-email {
+            font-weight: 500;
+            color: #2c3e50;
+        }
+
+        .logout-button {
+            padding: 8px 16px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .logout-button:hover {
+            background: #c0392b;
+        }
+
+        /* Upload button styles */
+        .upload-chat-button {
+            margin-top: 10px;
+            padding: 10px 20px;
+            background: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .upload-chat-button:hover:not(:disabled) {
+            background: #229954;
+        }
+
+        .upload-chat-button:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+
+        .upload-chat-button.loading {
+            position: relative;
+            color: transparent;
+        }
+
+        .upload-chat-button.loading::after {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            top: 50%;
+            left: 50%;
+            margin-left: -8px;
+            margin-top: -8px;
+            border: 2px solid #ffffff;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Dialog styles */
+        .dialog-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .dialog-overlay.active {
+            display: flex;
+        }
+
+        .dialog {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .dialog-header {
+            font-size: 20px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+
+        .dialog-content {
+            margin-bottom: 20px;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .dialog-content.success {
+            color: #27ae60;
+        }
+
+        .dialog-content.error {
+            color: #e74c3c;
+        }
+
+        .dialog-content pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+
+        .dialog-button {
+            padding: 10px 20px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .dialog-button:hover {
+            background: #2980b9;
+        }
+
+        /* Navigation tabs */
+        .nav-tabs {
+            display: flex;
+            gap: 10px;
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+            background: #f8f9fa;
+        }
+
+        .nav-tab {
+            padding: 10px 20px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px 6px 0 0;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: #666;
+            transition: all 0.3s;
+            border-bottom: none;
+        }
+
+        .nav-tab:hover {
+            background: #e9ecef;
+        }
+
+        .nav-tab.active {
+            background: white;
+            color: #3498db;
+            border-color: #3498db;
+            border-bottom-color: white;
+            margin-bottom: -1px;
+        }
+
+        .nav-tab:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Page containers */
+        .page-container {
+            display: none;
+        }
+
+        .page-container.active {
+            display: block;
+        }
+
+        /* My Chats page */
+        .my-chats-container {
+            padding: 20px;
+        }
+
+        .my-chats-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .my-chats-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .refresh-button {
+            padding: 8px 16px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .refresh-button:hover {
+            background: #2980b9;
+        }
+
+        .refresh-button:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+
+        .chats-list {
+            display: grid;
+            gap: 15px;
+        }
+
+        .chat-item {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .chat-item:hover {
+            background: #e9ecef;
+            border-color: #3498db;
+            transform: translateY(-2px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .chat-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 10px;
+        }
+
+        .chat-item-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .chat-item-date {
+            font-size: 12px;
+            color: #999;
+            white-space: nowrap;
+        }
+
+        .chat-item-meta {
+            font-size: 13px;
+            color: #666;
+            margin-top: 8px;
+        }
+
+        .chat-item-meta-item {
+            display: inline-block;
+            margin-right: 15px;
+        }
+
+        .chat-item-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            align-items: center;
+        }
+
+        .delete-chat-button {
+            padding: 6px 12px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .delete-chat-button:hover {
+            background: #c0392b;
+        }
+
+        .delete-chat-button:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+
+        .delete-chat-button.loading {
+            position: relative;
+            color: transparent;
+        }
+
+        .delete-chat-button.loading::after {
+            content: '';
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            top: 50%;
+            left: 50%;
+            margin-left: -6px;
+            margin-top: -6px;
+            border: 2px solid #ffffff;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+
+        .loading-spinner {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .loading-spinner::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+
+        .empty-chats {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-chats-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
     </style>
 </head>
 <body>
@@ -221,6 +709,58 @@
             <h1>Chat Viewer</h1>
         </div>
 
+        <!-- Authentication Section -->
+        <div class="auth-section" id="authSection">
+            <div class="auth-container">
+                <!-- Not authenticated: Show login/signup forms -->
+                <div id="authFormsContainer">
+                    <div class="auth-tabs">
+                        <button class="auth-tab active" id="loginTab" onclick="switchAuthTab('login')">Login</button>
+                        <button class="auth-tab" id="signupTab" onclick="switchAuthTab('signup')">Sign Up</button>
+                    </div>
+                    <form class="auth-form active" id="loginForm" onsubmit="handleLogin(event)">
+                        <div class="auth-form-group">
+                            <label for="loginEmail">Email</label>
+                            <input type="email" id="loginEmail" required>
+                        </div>
+                        <div class="auth-form-group">
+                            <label for="loginPassword">Password</label>
+                            <input type="password" id="loginPassword" required>
+                        </div>
+                        <div id="loginError" class="auth-error"></div>
+                        <button type="submit" class="auth-button" id="loginButton">Login</button>
+                    </form>
+                    <form class="auth-form" id="signupForm" onsubmit="handleSignup(event)">
+                        <div class="auth-form-group">
+                            <label for="signupEmail">Email</label>
+                            <input type="email" id="signupEmail" required>
+                        </div>
+                        <div class="auth-form-group">
+                            <label for="signupPassword">Password</label>
+                            <input type="password" id="signupPassword" required minlength="6">
+                        </div>
+                        <div id="signupError" class="auth-error"></div>
+                        <button type="submit" class="auth-button" id="signupButton">Sign Up</button>
+                    </form>
+                </div>
+                <!-- Authenticated: Show user info -->
+                <div class="user-info" id="userInfo">
+                    <div class="user-info-text">
+                        Logged in as: <span class="user-email" id="userEmail"></span>
+                    </div>
+                    <button class="logout-button" onclick="handleLogout()">Logout</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="nav-tabs" id="navTabs" style="display: none;">
+            <button class="nav-tab active" id="viewChatTab" onclick="switchPage('view')">View Chat</button>
+            <button class="nav-tab" id="myChatsTab" onclick="switchPage('my-chats')">My Chats</button>
+        </div>
+
+        <!-- View Chat Page -->
+        <div class="page-container active" id="viewChatPage">
         <div class="upload-section">
             <div class="file-input-wrapper">
                 <input type="file" id="fileInput" class="file-input" accept=".json">
@@ -232,17 +772,690 @@
         <div id="errorContainer"></div>
 
         <div id="chatContainer" class="chat-container"></div>
+        </div>
+
+        <!-- My Chats Page -->
+        <div class="page-container" id="myChatsPage">
+            <div class="my-chats-container">
+                <div class="my-chats-header">
+                    <div class="my-chats-title">My Uploaded Chats</div>
+                    <button class="refresh-button" id="refreshChatsButton" onclick="loadMyChats()">Refresh</button>
+                </div>
+                <div id="chatsListContainer">
+                    <div class="loading-spinner">Loading chats...</div>
+                </div>
+            </div>
+        </div>
     </div>
+
+    <!-- Dialog Component -->
+    <div class="dialog-overlay" id="dialogOverlay" onclick="closeDialog(event)">
+        <div class="dialog" onclick="event.stopPropagation()">
+            <div class="dialog-header" id="dialogHeader">Result</div>
+            <div class="dialog-content" id="dialogContent"></div>
+            <button class="dialog-button" onclick="closeDialog()">Close</button>
+        </div>
+    </div>
+
+    <!-- Supabase JS Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Config file -->
+    <script src="config.js"></script>
 
     <script>
         let conversation = null;
+        let conversationFromDatabase = false; // Track if chat is loaded from Supabase
+        let currentUser = null;
+        let supabaseClient = null;
 
         const fileInput = document.getElementById('fileInput');
         const fileName = document.getElementById('fileName');
         const errorContainer = document.getElementById('errorContainer');
         const chatContainer = document.getElementById('chatContainer');
+        const authSection = document.getElementById('authSection');
+        const authFormsContainer = document.getElementById('authFormsContainer');
+        const userInfo = document.getElementById('userInfo');
+        const userEmail = document.getElementById('userEmail');
+        const dialogOverlay = document.getElementById('dialogOverlay');
+        const dialogHeader = document.getElementById('dialogHeader');
+        const dialogContent = document.getElementById('dialogContent');
+
+        // Initialize Supabase
+        if (typeof SUPABASE_CONFIG !== 'undefined' && typeof supabase !== 'undefined') {
+            try {
+                supabaseClient = supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.key);
+                console.log('Supabase client initialized successfully');
+                
+                // Check for existing session
+                supabaseClient.auth.getSession().then(({ data: { session }, error }) => {
+                    if (error) {
+                        console.error('Error getting session:', error);
+                    } else if (session) {
+                        currentUser = session.user;
+                        updateAuthUI();
+                    }
+                }).catch(error => {
+                    console.error('Exception getting session:', error);
+                });
+
+                // Listen for auth state changes
+                supabaseClient.auth.onAuthStateChange((event, session) => {
+                    console.log('Auth state changed:', event, session?.user?.email || 'no user');
+                    if (session) {
+                        currentUser = session.user;
+                    } else {
+                        currentUser = null;
+                    }
+                    updateAuthUI();
+                    updateUploadButton();
+                    
+                    // If user logs in and is on my-chats page, load chats
+                    if (session && document.getElementById('myChatsPage').classList.contains('active')) {
+                        loadMyChats();
+                    }
+                });
+            } catch (error) {
+                console.error('Failed to initialize Supabase client:', error);
+            }
+        } else {
+            console.error('Supabase configuration or library not loaded:', {
+                hasConfig: typeof SUPABASE_CONFIG !== 'undefined',
+                hasLibrary: typeof supabase !== 'undefined'
+            });
+        }
 
         fileInput.addEventListener('change', handleFileUpload);
+
+        // Helper function to format error messages with full details
+        function formatError(error) {
+            if (!error) {
+                return 'Unknown error occurred';
+            }
+            
+            let errorText = '';
+            const details = [];
+            
+            // Primary error message
+            if (error.message) {
+                errorText = error.message;
+            }
+            
+            // Supabase-specific error fields
+            if (error.status) details.push(`Status: ${error.status}`);
+            if (error.statusText) details.push(`Status Text: ${error.statusText}`);
+            if (error.error_description) details.push(`Description: ${error.error_description}`);
+            if (error.error) details.push(`Error: ${error.error}`);
+            if (error.code) details.push(`Code: ${error.code}`);
+            if (error.hint) details.push(`Hint: ${error.hint}`);
+            
+            // Check for Supabase request ID (useful for support)
+            if (error.requestId) details.push(`Request ID: ${error.requestId}`);
+            
+            // Check for Supabase error code in headers (from x_sb_error_code)
+            if (error.name === 'AuthApiError' || error.name === 'PostgrestError') {
+                details.push(`Error Type: ${error.name}`);
+            }
+            
+            // Check for nested error details
+            if (error.details) {
+                const detailsStr = typeof error.details === 'string' 
+                    ? error.details 
+                    : JSON.stringify(error.details, null, 2);
+                details.push(`Details: ${detailsStr}`);
+            }
+            
+            // Check for response data (common in Supabase errors)
+            if (error.data) {
+                const dataStr = typeof error.data === 'string' 
+                    ? error.data 
+                    : JSON.stringify(error.data, null, 2);
+                details.push(`Response Data:\n${dataStr}`);
+            }
+            
+            // Check for response object (HTTP response details)
+            if (error.response) {
+                const responseStr = typeof error.response === 'string'
+                    ? error.response
+                    : JSON.stringify(error.response, null, 2);
+                details.push(`HTTP Response:\n${responseStr}`);
+            }
+            
+            // Check for originalError (nested error)
+            if (error.originalError) {
+                const originalStr = typeof error.originalError === 'string'
+                    ? error.originalError
+                    : JSON.stringify(error.originalError, null, 2);
+                details.push(`Original Error:\n${originalStr}`);
+            }
+            
+            // Check for cause (error chaining)
+            if (error.cause) {
+                const causeStr = typeof error.cause === 'string'
+                    ? error.cause
+                    : JSON.stringify(error.cause, null, 2);
+                details.push(`Error Cause:\n${causeStr}`);
+            }
+            
+            // Check for any other properties we might have missed
+            const errorKeys = Object.keys(error);
+            const knownKeys = ['message', 'status', 'statusText', 'error_description', 'error', 'code', 'hint', 'details', 'data', 'name', 'stack'];
+            const unknownKeys = errorKeys.filter(key => !knownKeys.includes(key));
+            
+            if (unknownKeys.length > 0) {
+                const unknownProps = {};
+                unknownKeys.forEach(key => {
+                    unknownProps[key] = error[key];
+                });
+                details.push(`Additional Properties:\n${JSON.stringify(unknownProps, null, 2)}`);
+            }
+            
+            // If we have details, append them
+            if (details.length > 0) {
+                errorText += (errorText ? '\n\n' : '') + details.join('\n');
+            }
+            
+            // Add helpful message for 500 errors
+            if (error.status === 500 || error.code === 'unexpected_failure') {
+                errorText += '\n\n--- Debugging Tips ---\n';
+                errorText += 'This is a server-side database error. Check:\n';
+                errorText += '1. Supabase Dashboard → Logs → Postgres Logs\n';
+                errorText += '2. Database → Triggers (on auth.users table)\n';
+                errorText += '3. Database → Functions (called during signup)\n';
+                errorText += '4. Verify all referenced tables/columns exist\n';
+                errorText += 'See ui/SUPABASE_DEBUG.md for detailed debugging steps.';
+            }
+            
+            // If no message but we have the error object, stringify the whole thing
+            if (!errorText && error) {
+                try {
+                    errorText = JSON.stringify(error, null, 2);
+                } catch (e) {
+                    errorText = String(error);
+                }
+            }
+            
+            return errorText || 'Unknown error occurred';
+        }
+
+        // Authentication functions
+        function switchAuthTab(tab) {
+            const loginTab = document.getElementById('loginTab');
+            const signupTab = document.getElementById('signupTab');
+            const loginForm = document.getElementById('loginForm');
+            const signupForm = document.getElementById('signupForm');
+            const loginError = document.getElementById('loginError');
+            const signupError = document.getElementById('signupError');
+
+            if (tab === 'login') {
+                loginTab.classList.add('active');
+                signupTab.classList.remove('active');
+                loginForm.classList.add('active');
+                signupForm.classList.remove('active');
+                loginError.textContent = '';
+            } else {
+                signupTab.classList.add('active');
+                loginTab.classList.remove('active');
+                signupForm.classList.add('active');
+                loginForm.classList.remove('active');
+                signupError.textContent = '';
+            }
+        }
+
+        async function handleSignup(event) {
+            event.preventDefault();
+            const email = document.getElementById('signupEmail').value;
+            const password = document.getElementById('signupPassword').value;
+            const signupError = document.getElementById('signupError');
+            const signupButton = document.getElementById('signupButton');
+
+            signupError.textContent = '';
+            signupButton.disabled = true;
+            signupButton.textContent = 'Signing up...';
+
+            // Validate Supabase client is initialized
+            if (!supabaseClient) {
+                signupError.textContent = 'Error: Supabase client not initialized. Please check your configuration.';
+                signupError.style.color = '#e74c3c';
+                signupButton.disabled = false;
+                signupButton.textContent = 'Sign Up';
+                console.error('Supabase client not initialized');
+                return;
+            }
+
+            try {
+                const { data, error } = await supabaseClient.auth.signUp({
+                    email: email,
+                    password: password
+                });
+
+                // Log full response for debugging
+                console.log('Signup response:', { data, error });
+
+                if (error) {
+                    // Log the full error object including any nested properties
+                    console.error('Signup error object:', error);
+                    console.error('Error keys:', Object.keys(error));
+                    console.error('Full error JSON:', JSON.stringify(error, null, 2));
+                    throw error;
+                }
+
+                if (data.user) {
+                    signupError.textContent = 'Sign up successful! Please check your email to verify your account.';
+                    signupError.style.color = '#27ae60';
+                    // Clear form
+                    document.getElementById('signupForm').reset();
+                } else {
+                    // If no user but no error, log the data for debugging
+                    console.warn('Signup succeeded but no user in data:', data);
+                }
+            } catch (error) {
+                const fullError = formatError(error);
+                signupError.textContent = fullError;
+                signupError.style.color = '#e74c3c';
+                console.error('Signup error caught:', error);
+                console.error('Error type:', typeof error);
+                console.error('Error constructor:', error?.constructor?.name);
+                
+                // Try to get more details from the error
+                if (error && typeof error === 'object') {
+                    console.error('Error properties:', Object.getOwnPropertyNames(error));
+                    // Check for response property (might be in a nested structure)
+                    if (error.response) {
+                        console.error('Error response:', error.response);
+                    }
+                    // Check for originalError or cause
+                    if (error.originalError) {
+                        console.error('Original error:', error.originalError);
+                    }
+                    if (error.cause) {
+                        console.error('Error cause:', error.cause);
+                    }
+                }
+            } finally {
+                signupButton.disabled = false;
+                signupButton.textContent = 'Sign Up';
+            }
+        }
+
+        async function handleLogin(event) {
+            event.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            const loginError = document.getElementById('loginError');
+            const loginButton = document.getElementById('loginButton');
+
+            loginError.textContent = '';
+            loginButton.disabled = true;
+            loginButton.textContent = 'Logging in...';
+
+            try {
+                const { data, error } = await supabaseClient.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+
+                if (error) throw error;
+
+                currentUser = data.user;
+                updateAuthUI();
+                // Clear form
+                document.getElementById('loginForm').reset();
+            } catch (error) {
+                const fullError = formatError(error);
+                loginError.textContent = fullError;
+                loginError.style.color = '#e74c3c';
+                console.error('Login error:', error);
+            } finally {
+                loginButton.disabled = false;
+                loginButton.textContent = 'Login';
+            }
+        }
+
+        async function handleLogout() {
+            try {
+                await supabaseClient.auth.signOut();
+                currentUser = null;
+                updateAuthUI();
+            } catch (error) {
+                console.error('Error logging out:', error);
+            }
+        }
+
+        function updateAuthUI() {
+            const navTabs = document.getElementById('navTabs');
+            if (currentUser) {
+                authFormsContainer.style.display = 'none';
+                userInfo.classList.add('active');
+                userEmail.textContent = currentUser.email;
+                navTabs.style.display = 'flex';
+            } else {
+                authFormsContainer.style.display = 'block';
+                userInfo.classList.remove('active');
+                navTabs.style.display = 'none';
+                // Switch back to view chat page if logged out
+                switchPage('view');
+            }
+            updateUploadButton();
+        }
+
+        function updateUploadButton() {
+            const uploadButton = document.getElementById('uploadChatButton');
+            if (uploadButton) {
+                uploadButton.disabled = !currentUser;
+            }
+        }
+
+        // Upload function
+        async function handleUploadChat() {
+            if (!conversation) {
+                showDialog('Error', 'No chat loaded to upload', 'error');
+                return;
+            }
+
+            if (!currentUser) {
+                showDialog('Error', 'Please log in to upload chats', 'error');
+                return;
+            }
+
+            const uploadButton = document.getElementById('uploadChatButton');
+            uploadButton.disabled = true;
+            uploadButton.classList.add('loading');
+
+            try {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (!session) {
+                    throw new Error('Not authenticated');
+                }
+
+                const response = await supabaseClient.functions.invoke('chat_export', {
+                    body: conversation,
+                    headers: {
+                        Authorization: `Bearer ${session.access_token}`
+                    }
+                });
+
+                if (response.error) {
+                    throw response.error;
+                }
+
+                showDialog('Success', 'Chat uploaded successfully!', 'success', response.data);
+            } catch (error) {
+                showDialog('Error', 'Failed to upload chat', 'error', error.message || JSON.stringify(error, null, 2));
+            } finally {
+                uploadButton.disabled = false;
+                uploadButton.classList.remove('loading');
+            }
+        }
+
+        // Dialog functions
+        function showDialog(header, content, type, details) {
+            dialogHeader.textContent = header;
+            dialogContent.className = `dialog-content ${type}`;
+            
+            let contentHTML = `<p>${content}</p>`;
+            if (details) {
+                contentHTML += `<pre>${typeof details === 'string' ? details : JSON.stringify(details, null, 2)}</pre>`;
+            }
+            dialogContent.innerHTML = contentHTML;
+            dialogOverlay.classList.add('active');
+        }
+
+        function closeDialog(event) {
+            if (event && event.target !== dialogOverlay && event.target !== event.currentTarget) {
+                return;
+            }
+            dialogOverlay.classList.remove('active');
+        }
+
+        // Page navigation
+        function switchPage(page) {
+            const viewChatPage = document.getElementById('viewChatPage');
+            const myChatsPage = document.getElementById('myChatsPage');
+            const viewChatTab = document.getElementById('viewChatTab');
+            const myChatsTab = document.getElementById('myChatsTab');
+
+            if (page === 'my-chats') {
+                if (!currentUser) {
+                    showDialog('Error', 'Please log in to view your chats', 'error');
+                    return;
+                }
+                viewChatPage.classList.remove('active');
+                myChatsPage.classList.add('active');
+                viewChatTab.classList.remove('active');
+                myChatsTab.classList.add('active');
+                loadMyChats();
+            } else {
+                myChatsPage.classList.remove('active');
+                viewChatPage.classList.add('active');
+                myChatsTab.classList.remove('active');
+                viewChatTab.classList.add('active');
+            }
+        }
+
+        // Load my chats from Supabase
+        async function loadMyChats() {
+            if (!currentUser || !supabaseClient) {
+                return;
+            }
+
+            const container = document.getElementById('chatsListContainer');
+            const refreshButton = document.getElementById('refreshChatsButton');
+            
+            container.innerHTML = '<div class="loading-spinner">Loading chats...</div>';
+            refreshButton.disabled = true;
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from('chats')
+                    .select('*')
+                    .eq('owner_id', currentUser.id)
+                    .order('created_at', { ascending: false });
+
+                if (error) {
+                    throw error;
+                }
+
+                refreshButton.disabled = false;
+
+                if (!data || data.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-chats">
+                            <div class="empty-chats-icon">📭</div>
+                            <div>No chats found. Upload a chat to get started!</div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Display chats list
+                const chatsList = document.createElement('div');
+                chatsList.className = 'chats-list';
+
+                data.forEach(chat => {
+                    const chatItem = document.createElement('div');
+                    chatItem.className = 'chat-item';
+                    
+                    // Handle click on chat item (but not on buttons)
+                    chatItem.onclick = (e) => {
+                        // Don't trigger view if clicking on delete button or its container
+                        if (e.target.closest('.delete-chat-button') || e.target.closest('.chat-item-actions')) {
+                            return;
+                        }
+                        viewChatFromDatabase(chat);
+                    };
+
+                    // Try different possible column names for chat data
+                    let chatData = chat.chat_data || chat.data || chat.content || chat;
+                    
+                    // Parse if string
+                    if (typeof chatData === 'string') {
+                        try {
+                            chatData = JSON.parse(chatData);
+                        } catch (e) {
+                            console.warn('Could not parse chat data:', e);
+                            chatData = {};
+                        }
+                    }
+
+                    const title = chat.title || chatData?.title || chatData?.metadata?.title || 'Untitled Chat';
+                    const createdAt = chat.created_at || chat.createdAt || chat.timestamp || 'Unknown date';
+                    const dateStr = createdAt !== 'Unknown date' ? new Date(createdAt).toLocaleString() : 'Unknown date';
+                    
+                    // Extract metadata if available
+                    const metadata = [];
+                    if (chatData?.metadata) {
+                        if (chatData.metadata.model) metadata.push(`Model: ${chatData.metadata.model}`);
+                        if (chatData.metadata.Project) metadata.push(`Project: ${chatData.metadata.Project}`);
+                    }
+                    const messageCount = chatData?.messages?.length || 0;
+                    if (messageCount > 0) {
+                        metadata.push(`Messages: ${messageCount}`);
+                    }
+
+                    // Get chat ID (try different possible column names)
+                    const chatId = chat.id || chat.chat_id || chat._id;
+                    
+                    // Store chat ID as data attribute
+                    chatItem.setAttribute('data-chat-id', chatId);
+
+                    chatItem.innerHTML = `
+                        <div class="chat-item-header">
+                            <div>
+                                <div class="chat-item-title">${escapeHtml(title)}</div>
+                                <div class="chat-item-date">${dateStr}</div>
+                            </div>
+                        </div>
+                        ${metadata.length > 0 ? `
+                            <div class="chat-item-meta">
+                                ${metadata.map(m => `<span class="chat-item-meta-item">${escapeHtml(m)}</span>`).join('')}
+                            </div>
+                        ` : ''}
+                        <div class="chat-item-actions">
+                            <button class="delete-chat-button" data-chat-id="${chatId}" data-chat-title="${escapeHtml(title)}" onclick="event.stopPropagation(); handleDeleteChat(event)">
+                                Delete
+                            </button>
+                        </div>
+                    `;
+
+                    chatsList.appendChild(chatItem);
+                });
+
+                container.innerHTML = '';
+                container.appendChild(chatsList);
+
+            } catch (error) {
+                refreshButton.disabled = false;
+                console.error('Error loading chats:', error);
+                const errorMsg = formatError(error);
+                container.innerHTML = `
+                    <div class="error">
+                        Error loading chats:<br>
+                        <pre style="margin-top: 10px; font-size: 12px;">${escapeHtml(errorMsg)}</pre>
+                    </div>
+                `;
+            }
+        }
+
+        // View chat from database
+        function viewChatFromDatabase(chat) {
+            // Switch to view chat page
+            switchPage('view');
+            
+            // Parse chat data - try different possible column names
+            let chatData = chat.chat_data || chat.data || chat.content || chat;
+            
+            if (typeof chatData === 'string') {
+                try {
+                    chatData = JSON.parse(chatData);
+                } catch (e) {
+                    console.error('Error parsing chat data:', e);
+                    showError('Error parsing chat data: ' + e.message);
+                    return;
+                }
+            } else if (typeof chatData === 'object' && chatData !== null) {
+                // Already an object, use it
+            } else {
+                showError('Invalid chat data format');
+                return;
+            }
+
+            // Set conversation and mark as from database
+            conversation = chatData;
+            conversationFromDatabase = true; // Mark that this chat is from database
+            displayConversation();
+        }
+
+        // Helper function to escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Handle delete chat button click
+        function handleDeleteChat(event) {
+            const button = event.target;
+            const chatId = button.getAttribute('data-chat-id');
+            const chatTitle = button.getAttribute('data-chat-title') || 'this chat';
+            
+            if (!chatId) {
+                showDialog('Error', 'Chat ID not found', 'error');
+                return;
+            }
+
+            deleteChat(chatId, chatTitle, button);
+        }
+
+        // Delete chat from Supabase
+        async function deleteChat(chatId, chatTitle, button) {
+            // Confirm deletion
+            const confirmed = confirm(`Are you sure you want to delete "${chatTitle}"?\n\nThis action cannot be undone.`);
+            if (!confirmed) {
+                return;
+            }
+
+            if (!currentUser || !supabaseClient) {
+                showDialog('Error', 'Not authenticated', 'error');
+                return;
+            }
+
+            // Disable the delete button
+            if (button) {
+                button.disabled = true;
+                button.classList.add('loading');
+                button.textContent = 'Deleting...';
+            }
+
+            try {
+                const { error } = await supabaseClient
+                    .from('chats')
+                    .delete()
+                    .eq('id', chatId)
+                    .eq('owner_id', currentUser.id); // Ensure user can only delete their own chats
+
+                if (error) {
+                    throw error;
+                }
+
+                // Show success message
+                showDialog('Success', `Chat "${chatTitle}" has been deleted successfully.`, 'success');
+                
+                // Reload the chats list
+                loadMyChats();
+
+            } catch (error) {
+                console.error('Error deleting chat:', error);
+                const errorMsg = formatError(error);
+                showDialog('Error', 'Failed to delete chat', 'error', errorMsg);
+                
+                // Re-enable button on error
+                if (button) {
+                    button.disabled = false;
+                    button.classList.remove('loading');
+                    button.textContent = 'Delete';
+                }
+            }
+        }
 
         function handleFileUpload(event) {
             const file = event.target.files[0];
@@ -251,6 +1464,7 @@
             fileName.textContent = `Selected: ${file.name}`;
             errorContainer.innerHTML = '';
             conversation = null;
+            conversationFromDatabase = false; // Chat is from file upload, not database
 
             const reader = new FileReader();
             reader.onload = function(e) {
@@ -319,6 +1533,18 @@
 
             header.appendChild(title);
             header.appendChild(metadata);
+            
+            // Add upload button only if chat is NOT from database
+            if (!conversationFromDatabase) {
+                const uploadButton = document.createElement('button');
+                uploadButton.className = 'upload-chat-button';
+                uploadButton.id = 'uploadChatButton';
+                uploadButton.textContent = 'Upload to Supabase';
+                uploadButton.onclick = handleUploadChat;
+                uploadButton.disabled = !currentUser;
+                header.appendChild(uploadButton);
+            }
+            
             chatContainer.appendChild(header);
 
             // Display messages
@@ -336,6 +1562,9 @@
 
             chatContainer.classList.add('active');
             chatContainer.scrollTop = chatContainer.scrollHeight;
+            
+            // Update upload button state
+            updateUploadButton();
         }
 
         function createMessageElement(message) {

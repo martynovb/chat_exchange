@@ -194,3 +194,6 @@ frontend/node_modules/*
 # Result folder - ignore exported chat files but keep directory
 results/*.json
 !result/.gitkeep
+
+# UI config file with Supabase credentials
+ui/config.js

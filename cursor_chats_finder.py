@@ -565,24 +565,21 @@ def _normalize_cursor_tool_input(tool_name: str, normalized_tool_name: str, tool
     Returns:
         Normalized tool input
     """
-    # Normalize web_search: format as object with request and optional url
+    # Dispatch to tool-specific normalization functions
     if tool_name == "web_search" or normalized_tool_name == "web_request":
-        result = {}
-        if isinstance(tool_input, dict):
-            # Extract searchTerm as request
-            if "searchTerm" in tool_input:
-                result["request"] = tool_input["searchTerm"]
-            # Extract url if it exists
-            if "url" in tool_input:
-                result["url"] = tool_input["url"]
-        elif isinstance(tool_input, str):
-            # If it's just a string, use it as the request
-            result["request"] = tool_input
-        
-        # Return the result object (only if we have at least a request)
-        if "request" in result:
-            return result
-        return tool_input
+        return _normalize_cursor_web_request_input(tool_input)
+    elif normalized_tool_name == "read":
+        return _normalize_cursor_read_input(tool_input)
+    elif normalized_tool_name == "terminal":
+        return _normalize_cursor_terminal_input(tool_input)
+    elif normalized_tool_name == "todo":
+        return _normalize_cursor_todo_input(tool_input)
+    elif normalized_tool_name == "create":
+        return _normalize_cursor_create_input(tool_input)
+    elif normalized_tool_name == "update":
+        return _normalize_cursor_update_input(tool_input)
+    elif normalized_tool_name == "delete":
+        return _normalize_cursor_delete_input(tool_input)
     
     # General rule: if tool_input is a dict with relativeWorkspacePath, extract it
     # (but skip this for read operations which have special handling)
@@ -590,106 +587,152 @@ def _normalize_cursor_tool_input(tool_name: str, normalized_tool_name: str, tool
         if isinstance(tool_input, dict) and "relativeWorkspacePath" in tool_input:
             return tool_input["relativeWorkspacePath"]
     
-    # Normalize terminal: extract fullText from executableCommands
-    if normalized_tool_name == "terminal":
-        if isinstance(tool_input, dict):
-            # Check for parsingResult -> executableCommands structure
-            parsing_result = tool_input.get("parsingResult", {})
-            if isinstance(parsing_result, dict):
-                executable_commands = parsing_result.get("executableCommands", [])
-                if isinstance(executable_commands, list) and len(executable_commands) > 0:
-                    first_command = executable_commands[0]
-                    if isinstance(first_command, dict):
-                        full_text = first_command.get("fullText", "")
-                        if full_text:
-                            return full_text
-            # Fallback: if it's already a string, return as-is
-            if isinstance(tool_input, str):
-                return tool_input
-    
-    # Normalize todo: simplify structure
-    if normalized_tool_name == "todo":
-        if isinstance(tool_input, dict):
-            # Extract overview as description (skip if empty)
-            description = tool_input.get("overview", "")
-            if not description or not description.strip():
-                description = None
-            
-            # Extract todos array and simplify (skip todos with empty names)
-            todos = []
-            todos_raw = tool_input.get("todos", [])
-            if isinstance(todos_raw, list):
-                for todo_item in todos_raw:
-                    if isinstance(todo_item, dict):
-                        todo_name = todo_item.get("content", "")
-                        # Skip todos with empty names
-                        if todo_name and todo_name.strip():
-                            simplified_todo = {
-                                "name": todo_name,
-                                "status": todo_item.get("status", "")
-                            }
-                            todos.append(simplified_todo)
-            
-            # If no description and no valid todos, skip this tool entirely
-            if description is None and not todos:
-                return None
-            
-            # Build result, only include description if it's not empty
-            result = {"todos": todos}
-            if description is not None:
-                result["description"] = description
-            
-            return result
-    
-    # For create and update operations, extract relativeWorkspacePath if it exists
-    if normalized_tool_name in ["create", "update"]:
-        if isinstance(tool_input, dict) and "relativeWorkspacePath" in tool_input:
-            return tool_input["relativeWorkspacePath"]
-        elif isinstance(tool_input, str):
-            return tool_input
-    
-    # For read operations - always return an array
-    if normalized_tool_name == "read":
-        if isinstance(tool_input, dict):
-            # Check if it has codeResults structure (codebase_search result)
-            if "codeResults" in tool_input and isinstance(tool_input["codeResults"], list):
-                # Extract relativeWorkspacePath from each codeBlock
-                file_paths = []
-                for code_result in tool_input["codeResults"]:
-                    if isinstance(code_result, dict):
-                        code_block = code_result.get("codeBlock")
-                        if isinstance(code_block, dict):
-                            relative_path = code_block.get("relativeWorkspacePath")
-                            if relative_path:
-                                file_paths.append(relative_path)
-                if file_paths:
-                    return file_paths
-            
-            # Check if it has path (grep/search operations)
-            elif "path" in tool_input:
-                path_value = tool_input["path"]
-                # Return as array
-                return [path_value] if path_value else []
-            
-            # Check if it has targetFile (simple read_file)
-            elif "targetFile" in tool_input:
-                target_file = tool_input["targetFile"]
-                # Return as array
-                return [target_file] if target_file else []
-        
-        # If it's already a string, wrap in array
-        elif isinstance(tool_input, str):
-            return [tool_input] if tool_input else []
-        
-        # If it's already a list, return as-is
-        elif isinstance(tool_input, list):
-            return tool_input
-    
-    # TODO: Add other Cursor-specific input normalization logic
     return tool_input
 
 
-def _normalize_cursor_tool_output(tool_name: str, normalized_tool_name: str, tool_output: Any) -> Any:
+def _normalize_cursor_web_request_input(tool_input: Any) -> Any:
+    """Normalize web_request tool input for Cursor."""
+    result = {}
+    if isinstance(tool_input, dict):
+        # Extract searchTerm as request
+        if "searchTerm" in tool_input:
+            result["request"] = tool_input["searchTerm"]
+        # Extract url if it exists
+        if "url" in tool_input:
+            result["url"] = tool_input["url"]
+    elif isinstance(tool_input, str):
+        # If it's just a string, use it as the request
+        result["request"] = tool_input
+    
+    # Return the result object (only if we have at least a request)
+    if "request" in result:
+        return result
+    return tool_input
+
+
+def _normalize_cursor_read_input(tool_input: Any) -> Any:
+    """Normalize read tool input for Cursor."""
+    if isinstance(tool_input, dict):
+        # Check if it has codeResults structure (codebase_search result)
+        if "codeResults" in tool_input and isinstance(tool_input["codeResults"], list):
+            # Extract relativeWorkspacePath from each codeBlock
+            file_paths = []
+            for code_result in tool_input["codeResults"]:
+                if isinstance(code_result, dict):
+                    code_block = code_result.get("codeBlock")
+                    if isinstance(code_block, dict):
+                        relative_path = code_block.get("relativeWorkspacePath")
+                        if relative_path:
+                            file_paths.append(relative_path)
+            if file_paths:
+                return file_paths
+        
+        # Check if it has path (grep/search operations)
+        elif "path" in tool_input:
+            path_value = tool_input["path"]
+            # Return as array
+            return [path_value] if path_value else []
+        
+        # Check if it has targetFile (simple read_file)
+        elif "targetFile" in tool_input:
+            target_file = tool_input["targetFile"]
+            # Return as array
+            return [target_file] if target_file else []
+    
+    # If it's already a string, wrap in array
+    elif isinstance(tool_input, str):
+        return [tool_input] if tool_input else []
+    
+    # If it's already a list, return as-is
+    elif isinstance(tool_input, list):
+        return tool_input
+    
+    return tool_input
+
+
+def _normalize_cursor_terminal_input(tool_input: Any) -> Any:
+    """Normalize terminal tool input for Cursor."""
+    if isinstance(tool_input, dict):
+        # Check for parsingResult -> executableCommands structure
+        parsing_result = tool_input.get("parsingResult", {})
+        if isinstance(parsing_result, dict):
+            executable_commands = parsing_result.get("executableCommands", [])
+            if isinstance(executable_commands, list) and len(executable_commands) > 0:
+                first_command = executable_commands[0]
+                if isinstance(first_command, dict):
+                    full_text = first_command.get("fullText", "")
+                    if full_text:
+                        return full_text
+        # Fallback: if it's already a string, return as-is
+        if isinstance(tool_input, str):
+            return tool_input
+    return tool_input
+
+
+def _normalize_cursor_todo_input(tool_input: Any) -> Any:
+    """Normalize todo tool input for Cursor."""
+    if isinstance(tool_input, dict):
+        # Extract overview as description (skip if empty)
+        description = tool_input.get("overview", "")
+        if not description or not description.strip():
+            description = None
+        
+        # Extract todos array and simplify (skip todos with empty names)
+        todos = []
+        todos_raw = tool_input.get("todos", [])
+        if isinstance(todos_raw, list):
+            for todo_item in todos_raw:
+                if isinstance(todo_item, dict):
+                    todo_name = todo_item.get("content", "")
+                    # Skip todos with empty names
+                    if todo_name and todo_name.strip():
+                        simplified_todo = {
+                            "name": todo_name,
+                            "status": todo_item.get("status", "")
+                        }
+                        todos.append(simplified_todo)
+        
+        # If no description and no valid todos, skip this tool entirely
+        if description is None and not todos:
+            return None
+        
+        # Build result, only include description if it's not empty
+        result = {"todos": todos}
+        if description is not None:
+            result["description"] = description
+        
+        return result
+    return tool_input
+
+
+def _normalize_cursor_create_input(tool_input: Any) -> Any:
+    """Normalize create tool input for Cursor."""
+    if isinstance(tool_input, dict) and "relativeWorkspacePath" in tool_input:
+        return tool_input["relativeWorkspacePath"]
+    elif isinstance(tool_input, str):
+        return tool_input
+    return tool_input
+
+
+def _normalize_cursor_update_input(tool_input: Any) -> Any:
+    """Normalize update tool input for Cursor."""
+    # Extract only the file name from path (similar to Claude)
+    if isinstance(tool_input, dict) and "relativeWorkspacePath" in tool_input:
+        relative_path = tool_input["relativeWorkspacePath"]
+        if isinstance(relative_path, str):
+            return os.path.basename(relative_path)
+    elif isinstance(tool_input, str):
+        # If it's already a string, extract filename if it looks like a path
+        return os.path.basename(tool_input)
+    return tool_input
+
+
+def _normalize_cursor_delete_input(tool_input: Any) -> Any:
+    """Normalize delete tool input for Cursor."""
+    return tool_input
+
+
+def _normalize_cursor_tool_output(tool_name: str, normalized_tool_name: str, tool_output: Any, tool_input: Any = None) -> Any:
     """
     Normalize tool output for Cursor-specific tools.
     
@@ -701,27 +744,78 @@ def _normalize_cursor_tool_output(tool_name: str, normalized_tool_name: str, too
     Returns:
         Normalized tool output
     """
-    # For web_request, always return empty output
+    # Dispatch to tool-specific normalization functions
     if normalized_tool_name == "web_request":
-        return ""
+        return _normalize_cursor_web_request_output(tool_output)
+    elif normalized_tool_name == "read":
+        return _normalize_cursor_read_output(tool_output)
+    elif normalized_tool_name == "todo":
+        return _normalize_cursor_todo_output(tool_output)
+    elif normalized_tool_name == "terminal":
+        return _normalize_cursor_terminal_output(tool_output)
+    elif normalized_tool_name == "create":
+        return _normalize_cursor_create_output(tool_output)
+    elif normalized_tool_name == "update":
+        return _normalize_cursor_update_output(tool_output, tool_input)
+    elif normalized_tool_name == "delete":
+        return _normalize_cursor_delete_output(tool_output)
     
-    # For read operations, always return empty output
-    if normalized_tool_name == "read":
-        return ""
+    return tool_output
+
+
+def _normalize_cursor_web_request_output(tool_output: Any) -> Any:
+    """Normalize web_request tool output for Cursor."""
+    return ""
+
+
+def _normalize_cursor_read_output(tool_output: Any) -> Any:
+    """Normalize read tool output for Cursor."""
+    return ""
+
+
+def _normalize_cursor_todo_output(tool_output: Any) -> Any:
+    """Normalize todo tool output for Cursor."""
+    return ""
+
+
+def _normalize_cursor_terminal_output(tool_output: Any) -> Any:
+    """Normalize terminal tool output for Cursor."""
+    return ""
+
+
+def _normalize_cursor_create_output(tool_output: Any) -> Any:
+    """Normalize create tool output for Cursor."""
+    return ""
+
+
+def _normalize_cursor_update_output(tool_output: Any, tool_input: Any = None) -> Any:
+    """Normalize update tool output for Cursor."""
+    # Extract diff from Cursor's JSON output structure
+    if isinstance(tool_output, str):
+        try:
+            import json
+            parsed = json.loads(tool_output)
+            if isinstance(parsed, dict):
+                # Extract diffString from diff.chunks[0].diffString
+                diff = parsed.get("diff", {})
+                if isinstance(diff, dict):
+                    chunks = diff.get("chunks", [])
+                    if chunks and isinstance(chunks, list) and len(chunks) > 0:
+                        first_chunk = chunks[0]
+                        if isinstance(first_chunk, dict):
+                            diff_string = first_chunk.get("diffString", "")
+                            if diff_string:
+                                # Clean up the diff string (remove \r\n escape sequences)
+                                return diff_string.replace("\\r\\n", "\n").replace("\\n", "\n")
+        except (json.JSONDecodeError, ValueError, KeyError):
+            pass
     
-    # For todo operations, always return empty output
-    if normalized_tool_name == "todo":
-        return ""
-    
-    # For terminal operations, always return empty output
-    if normalized_tool_name == "terminal":
-        return ""
-    
-    # For create operations, always return empty output
-    if normalized_tool_name == "create":
-        return ""
-    
-    # TODO: Add other Cursor-specific output normalization logic
+    # If no diff can be extracted, return empty string
+    return ""
+
+
+def _normalize_cursor_delete_output(tool_output: Any) -> Any:
+    """Normalize delete tool output for Cursor."""
     return tool_output
 
 
@@ -751,7 +845,7 @@ def _normalize_cursor_tool_usage(tool_name: str, tool_input: Any, tool_output: A
     if normalized_input is None:
         return None
     
-    normalized_output = _normalize_cursor_tool_output(tool_name, normalized_name, tool_output)
+    normalized_output = _normalize_cursor_tool_output(tool_name, normalized_name, tool_output, tool_input)
     
     return {
         "tool_name": normalized_name,

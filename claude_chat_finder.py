@@ -20,6 +20,7 @@ line-by-line to extract the conversation history.
 from __future__ import annotations
 
 import json
+import os
 import pathlib
 import time
 import datetime
@@ -290,7 +291,7 @@ class ClaudeChatFinder(BaseChatFinder):
         else:
             return str(content) if content else ""
     
-    def _normalize_claude_tool_input(self, tool_name: str, normalized_tool_name: str, tool_input: Any) -> Any:
+    def _normalize_claude_tool_input(self, tool_name: str, normalized_tool_name: str, tool_input: Any, tool_output: Any = None) -> Any:
         """
         Normalize tool input for Claude-specific tools.
         
@@ -298,40 +299,167 @@ class ClaudeChatFinder(BaseChatFinder):
             tool_name: Original tool name from Claude
             normalized_tool_name: Normalized tool name
             tool_input: Original tool input
+            tool_output: Original tool output (optional, needed for terminal transformation)
             
         Returns:
             Normalized tool input
         """
-        # For web_request operations, format as object with request and optional url
+        # Dispatch to tool-specific normalization methods
         if normalized_tool_name == "web_request":
-            result = {}
-            if isinstance(tool_input, dict):
-                # Extract prompt as request (Claude uses "prompt" instead of "searchTerm")
-                if "prompt" in tool_input:
-                    result["request"] = tool_input["prompt"]
-                # Extract url if it exists
-                if "url" in tool_input:
-                    result["url"] = tool_input["url"]
-            elif isinstance(tool_input, str):
-                # If it's just a string, use it as the request
-                result["request"] = tool_input
-            
-            # Return the result object (only if we have at least a request)
-            if "request" in result:
-                return result
-            return tool_input
+            return self._normalize_claude_web_request_input(tool_input)
+        elif normalized_tool_name == "read":
+            return self._normalize_claude_read_input(tool_input)
+        elif normalized_tool_name == "todo":
+            return self._normalize_claude_todo_input(tool_input)
+        elif normalized_tool_name == "create":
+            return self._normalize_claude_create_input(tool_input)
+        elif normalized_tool_name == "update":
+            return self._normalize_claude_update_input(tool_input)
+        elif normalized_tool_name == "delete":
+            return self._normalize_claude_delete_input(tool_input)
+        elif normalized_tool_name == "terminal":
+            return self._normalize_claude_terminal_input(tool_input, tool_output)
         
-        # For read operations, extract targetFile if it exists
-        if normalized_tool_name == "read":
-            if isinstance(tool_input, dict) and "targetFile" in tool_input:
-                return tool_input["targetFile"]
-            elif isinstance(tool_input, str):
-                return tool_input
-        
-        # TODO: Add other Claude-specific input normalization logic
         return tool_input
     
-    def _normalize_claude_tool_output(self, tool_name: str, normalized_tool_name: str, tool_output: Any) -> Any:
+    def _normalize_claude_web_request_input(self, tool_input: Any) -> Any:
+        """Normalize web_request tool input for Claude."""
+        result = {}
+        if isinstance(tool_input, dict):
+            # Extract prompt as request (Claude uses "prompt" instead of "searchTerm")
+            if "prompt" in tool_input:
+                result["request"] = tool_input["prompt"]
+            # Extract url if it exists
+            if "url" in tool_input:
+                result["url"] = tool_input["url"]
+        elif isinstance(tool_input, str):
+            # If it's just a string, use it as the request
+            result["request"] = tool_input
+        
+        # Return the result object (only if we have at least a request)
+        if "request" in result:
+            return result
+        return tool_input
+    
+    def _normalize_claude_read_input(self, tool_input: Any) -> Any:
+        """Normalize read tool input for Claude."""
+        if isinstance(tool_input, dict):
+            # Check if it has file_path (Claude format)
+            if "file_path" in tool_input:
+                file_path = tool_input["file_path"]
+                return [file_path] if file_path else []
+            # Check if it has targetFile
+            elif "targetFile" in tool_input:
+                target_file = tool_input["targetFile"]
+                return [target_file] if target_file else []
+            # Check if it has pattern (glob pattern search - return the pattern)
+            elif "pattern" in tool_input:
+                pattern = tool_input["pattern"]
+                return pattern if pattern else []
+            # If it's an empty dict, return empty array
+            elif not tool_input:
+                return []
+        
+        # If it's already a string, wrap in array
+        elif isinstance(tool_input, str):
+            return [tool_input] if tool_input else []
+        
+        # If it's already a list, return as-is
+        elif isinstance(tool_input, list):
+            return tool_input
+        
+        return tool_input
+    
+    def _normalize_claude_todo_input(self, tool_input: Any) -> Any:
+        """Normalize todo tool input for Claude."""
+        # Handle null/None input - return None (will be kept as null in output)
+        if tool_input is None:
+            return None
+        
+        if isinstance(tool_input, dict):
+            # Extract todos array and simplify (skip todos with empty names)
+            todos = []
+            todos_raw = tool_input.get("todos", [])
+            if isinstance(todos_raw, list):
+                for todo_item in todos_raw:
+                    if isinstance(todo_item, dict):
+                        # Claude uses "content" for the name, convert to "name"
+                        todo_name = todo_item.get("content", "")
+                        # Skip todos with empty names
+                        if todo_name and todo_name.strip():
+                            simplified_todo = {
+                                "name": todo_name,
+                                "status": todo_item.get("status", "")
+                            }
+                            todos.append(simplified_todo)
+            
+            # If no valid todos, skip this tool entirely (unless tool_output has content)
+            if not todos:
+                return None
+            
+            # Build result with just todos array
+            return {
+                "todos": todos
+            }
+        return tool_input
+    
+    def _normalize_claude_create_input(self, tool_input: Any) -> Any:
+        """Normalize create tool input for Claude."""
+        # Extract only the file name from file_path, ignore content
+        if isinstance(tool_input, dict):
+            if "file_path" in tool_input:
+                file_path = tool_input["file_path"]
+                # Extract just the filename from the path
+                if isinstance(file_path, str):
+                    return os.path.basename(file_path)
+            # If no file_path, check for other path-related keys
+            elif "path" in tool_input:
+                path = tool_input["path"]
+                if isinstance(path, str):
+                    return os.path.basename(path)
+        elif isinstance(tool_input, str):
+            # If it's already a string, assume it's a path and extract filename
+            return os.path.basename(tool_input)
+        return tool_input
+    
+    def _normalize_claude_update_input(self, tool_input: Any) -> Any:
+        """Normalize update tool input for Claude."""
+        # Extract only the file name from file_path, ignore old_string/new_string
+        if isinstance(tool_input, dict):
+            if "file_path" in tool_input:
+                file_path = tool_input["file_path"]
+                # Extract just the filename from the path
+                if isinstance(file_path, str):
+                    return os.path.basename(file_path)
+            # If no file_path, check for other path-related keys
+            elif "path" in tool_input:
+                path = tool_input["path"]
+                if isinstance(path, str):
+                    return os.path.basename(path)
+        elif isinstance(tool_input, str):
+            # If it's already a string, assume it's a path and extract filename
+            return os.path.basename(tool_input)
+        return tool_input
+    
+    def _normalize_claude_delete_input(self, tool_input: Any) -> Any:
+        """Normalize delete tool input for Claude."""
+        return tool_input
+    
+    def _normalize_claude_terminal_input(self, tool_input: Any, tool_output: Any = None) -> Any:
+        """Normalize terminal tool input for Claude."""
+        # Extract command from tool_input dict (similar to Copilot's logic)
+        if isinstance(tool_input, dict):
+            # Check for "command" key (Claude format)
+            if "command" in tool_input:
+                command = tool_input["command"]
+                if isinstance(command, str):
+                    return command
+        # Fallback: if it's already a string, return as-is
+        elif isinstance(tool_input, str):
+            return tool_input
+        return tool_input
+    
+    def _normalize_claude_tool_output(self, tool_name: str, normalized_tool_name: str, tool_output: Any, tool_input: Any = None) -> Any:
         """
         Normalize tool output for Claude-specific tools.
         
@@ -339,24 +467,191 @@ class ClaudeChatFinder(BaseChatFinder):
             tool_name: Original tool name from Claude
             normalized_tool_name: Normalized tool name
             tool_output: Original tool output
+            tool_input: Original tool input (optional, needed for read operations with pattern)
             
         Returns:
             Normalized tool output
         """
-        # For web_request, always return empty output
+        # Dispatch to tool-specific normalization methods
         if normalized_tool_name == "web_request":
-            return ""
+            return self._normalize_claude_web_request_output(tool_output)
+        elif normalized_tool_name == "read":
+            return self._normalize_claude_read_output(tool_output, tool_input)
+        elif normalized_tool_name == "todo":
+            return self._normalize_claude_todo_output(tool_output)
+        elif normalized_tool_name == "create":
+            return self._normalize_claude_create_output(tool_output, tool_input)
+        elif normalized_tool_name == "update":
+            return self._normalize_claude_update_output(tool_output, tool_input)
+        elif normalized_tool_name == "delete":
+            return self._normalize_claude_delete_output(tool_output)
+        elif normalized_tool_name == "terminal":
+            return self._normalize_claude_terminal_output(tool_output)
         
-        # For read operations, always return empty output
-        if normalized_tool_name == "read":
-            return ""
-        
-        # For create operations, always return empty output
-        if normalized_tool_name == "create":
-            return ""
-        
-        # TODO: Add other Claude-specific output normalization logic
         return tool_output
+    
+    def _normalize_claude_web_request_output(self, tool_output: Any) -> Any:
+        """Normalize web_request tool output for Claude."""
+        return ""
+    
+    def _normalize_claude_read_output(self, tool_output: Any, tool_input: Any = None) -> Any:
+        """Normalize read tool output for Claude."""
+        # Check if the original input was a pattern search
+        if tool_input:
+            # Check if input was a pattern (dict with "pattern" key or string pattern)
+            is_pattern = False
+            if isinstance(tool_input, dict) and "pattern" in tool_input:
+                is_pattern = True
+            elif isinstance(tool_input, str) and ("*" in tool_input or "?" in tool_input):
+                # Heuristic: if it's a string with glob characters, likely a pattern
+                is_pattern = True
+            
+            if is_pattern and tool_output:
+                # Try to extract file list from tool_output
+                # tool_output might be a string with file paths, or a list, or a dict
+                if isinstance(tool_output, list):
+                    # If it's already a list, return it
+                    return tool_output
+                elif isinstance(tool_output, dict):
+                    # Check for common keys that might contain file paths
+                    if "files" in tool_output:
+                        files = tool_output["files"]
+                        return files if isinstance(files, list) else [files] if files else []
+                    elif "paths" in tool_output:
+                        paths = tool_output["paths"]
+                        return paths if isinstance(paths, list) else [paths] if paths else []
+                    elif "results" in tool_output:
+                        results = tool_output["results"]
+                        if isinstance(results, list):
+                            # Extract file paths from results
+                            file_paths = []
+                            for result in results:
+                                if isinstance(result, dict):
+                                    if "path" in result:
+                                        file_paths.append(result["path"])
+                                    elif "file" in result:
+                                        file_paths.append(result["file"])
+                                    elif "file_path" in result:
+                                        file_paths.append(result["file_path"])
+                                elif isinstance(result, str):
+                                    file_paths.append(result)
+                            return file_paths if file_paths else []
+                elif isinstance(tool_output, str) and tool_output.strip():
+                    # Try to parse as JSON or extract file paths from string
+                    try:
+                        parsed = json.loads(tool_output)
+                        if isinstance(parsed, list):
+                            return parsed
+                        elif isinstance(parsed, dict):
+                            # Recursively check the parsed dict
+                            if "files" in parsed:
+                                files = parsed["files"]
+                                return files if isinstance(files, list) else [files] if files else []
+                    except (json.JSONDecodeError, ValueError):
+                        # If not JSON, check if it's a newline-separated list of files
+                        lines = [line.strip() for line in tool_output.split("\n") if line.strip()]
+                        if lines:
+                            return lines
+        
+        # For non-pattern reads, return empty string (as before)
+        return ""
+    
+    def _normalize_claude_todo_output(self, tool_output: Any) -> Any:
+        """Normalize todo tool output for Claude."""
+        # Handle array of text objects (e.g., [{"type": "text", "text": "..."}])
+        if isinstance(tool_output, list):
+            # Extract text from text-type objects
+            text_parts = []
+            for item in tool_output:
+                if isinstance(item, dict):
+                    if item.get("type") == "text" and "text" in item:
+                        text_parts.append(item["text"])
+                    # Also check for direct "text" key
+                    elif "text" in item:
+                        text_parts.append(item["text"])
+                elif isinstance(item, str):
+                    text_parts.append(item)
+            
+            # If we found text parts, join them
+            if text_parts:
+                return "\n".join(text_parts)
+        
+        # If it's a string, return as-is
+        elif isinstance(tool_output, str):
+            return tool_output
+        
+        # For other types, return as-is
+        return tool_output
+    
+    def _normalize_claude_create_output(self, tool_output: Any, tool_input: Any = None) -> Any:
+        """Normalize create tool output for Claude."""
+        # Use the file name from input as output (don't show content)
+        if tool_input:
+            if isinstance(tool_input, dict):
+                if "file_path" in tool_input:
+                    file_path = tool_input["file_path"]
+                    if isinstance(file_path, str):
+                        return os.path.basename(file_path)
+                elif "path" in tool_input:
+                    path = tool_input["path"]
+                    if isinstance(path, str):
+                        return os.path.basename(path)
+            elif isinstance(tool_input, str):
+                return os.path.basename(tool_input)
+        return ""
+    
+    def _normalize_claude_update_output(self, tool_output: Any, tool_input: Any = None) -> Any:
+        """Normalize update tool output for Claude."""
+        # Generate diff from old_string and new_string in tool_input
+        if tool_input and isinstance(tool_input, dict):
+            old_string = tool_input.get("old_string")
+            new_string = tool_input.get("new_string")
+            
+            if old_string is not None and new_string is not None:
+                # Generate a simple unified diff format
+                return self._generate_diff(old_string, new_string)
+        
+        # If no diff can be generated, return empty string
+        return ""
+    
+    def _generate_diff(self, old_string: str, new_string: str) -> str:
+        """Generate a simple unified diff from old and new strings."""
+        # If strings are identical, return empty
+        if old_string == new_string:
+            return ""
+        
+        old_lines = old_string.splitlines()
+        new_lines = new_string.splitlines()
+        
+        # Simple line-by-line diff
+        diff_parts = []
+        max_len = max(len(old_lines), len(new_lines))
+        
+        for i in range(max_len):
+            old_line = old_lines[i] if i < len(old_lines) else None
+            new_line = new_lines[i] if i < len(new_lines) else None
+            
+            if old_line == new_line:
+                # Unchanged line - show with space prefix for context
+                if old_line is not None:
+                    diff_parts.append(f" {old_line}")
+            else:
+                # Changed or added/removed lines
+                if old_line is not None:
+                    diff_parts.append(f"-{old_line}")
+                if new_line is not None:
+                    diff_parts.append(f"+{new_line}")
+        
+        return "\n".join(diff_parts)
+    
+    def _normalize_claude_delete_output(self, tool_output: Any) -> Any:
+        """Normalize delete tool output for Claude."""
+        return tool_output
+    
+    def _normalize_claude_terminal_output(self, tool_output: Any) -> Any:
+        """Normalize terminal tool output for Claude."""
+        # Return empty string like Copilot (don't show command output)
+        return ""
     
     def _normalize_claude_tool_usage(self, tool_name: str, tool_input: Any, tool_output: Any) -> Optional[Dict[str, Any]]:
         """
@@ -378,8 +673,8 @@ class ClaudeChatFinder(BaseChatFinder):
             return None
         
         # Apply Claude-specific input/output normalization
-        normalized_input = self._normalize_claude_tool_input(tool_name, normalized_name, tool_input)
-        normalized_output = self._normalize_claude_tool_output(tool_name, normalized_name, tool_output)
+        normalized_input = self._normalize_claude_tool_input(tool_name, normalized_name, tool_input, tool_output)
+        normalized_output = self._normalize_claude_tool_output(tool_name, normalized_name, tool_output, tool_input)
         
         return {
             "tool_name": normalized_name,

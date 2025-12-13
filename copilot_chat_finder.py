@@ -348,131 +348,164 @@ class CopilotChatFinder(BaseChatFinder):
         Returns:
             Normalized tool input
         """
-        # For read operations - always return an array
+        # Dispatch to tool-specific normalization methods
         if normalized_tool_name == "read":
-            if isinstance(tool_input, dict):
-                # Check if it has files array (Copilot format)
-                if "files" in tool_input:
-                    files_value = tool_input["files"]
-                    # If it's already a list, return as-is
-                    if isinstance(files_value, list):
-                        return files_value
-                    # If it's a single file path string, wrap in array
-                    elif isinstance(files_value, str):
-                        return [files_value] if files_value else []
-                # Check if it has query (for search operations)
-                elif "query" in tool_input:
-                    # For search operations, we might not have files yet
-                    # Return empty array or handle query differently
-                    return []
-                # Check if it has file_path (single file read)
-                elif "file_path" in tool_input:
-                    file_path = tool_input["file_path"]
-                    return [file_path] if file_path else []
-                # Check for relativeWorkspacePath (for consistency)
-                elif "relativeWorkspacePath" in tool_input:
-                    relative_path = tool_input["relativeWorkspacePath"]
-                    return [relative_path] if relative_path else []
-            
-            # If it's already a string, wrap in array
-            elif isinstance(tool_input, str):
-                return [tool_input] if tool_input else []
-            
-            # If it's already a list, return as-is
-            elif isinstance(tool_input, list):
-                return tool_input
+            return self._normalize_copilot_read_input(tool_input)
+        elif normalized_tool_name == "terminal":
+            return self._normalize_copilot_terminal_input(tool_input, tool_output)
+        elif normalized_tool_name == "update":
+            return self._normalize_copilot_update_input(tool_input)
+        elif normalized_tool_name == "todo":
+            return self._normalize_copilot_todo_input(tool_input, tool_output)
+        elif normalized_tool_name == "create":
+            return self._normalize_copilot_create_input(tool_input)
+        elif normalized_tool_name == "delete":
+            return self._normalize_copilot_delete_input(tool_input)
+        elif normalized_tool_name == "web_request":
+            return self._normalize_copilot_web_request_input(tool_input)
         
-        # For terminal operations, extract commandLine.original from tool_output
-        if normalized_tool_name == "terminal":
-            if tool_output and isinstance(tool_output, dict):
-                command_line = tool_output.get("commandLine", {})
-                if isinstance(command_line, dict):
-                    original_command = command_line.get("original", "")
-                    if original_command:
-                        return original_command
-            # Fallback: if it's already a string, return as-is
-            if isinstance(tool_input, str):
-                return tool_input
+        return tool_input
+    
+    def _normalize_copilot_read_input(self, tool_input: Any) -> Any:
+        """Normalize read tool input for Copilot."""
+        if isinstance(tool_input, dict):
+            # Check if it has files array (Copilot format)
+            if "files" in tool_input:
+                files_value = tool_input["files"]
+                # If it's already a list, return as-is
+                if isinstance(files_value, list):
+                    return files_value
+                # If it's a single file path string, wrap in array
+                elif isinstance(files_value, str):
+                    return [files_value] if files_value else []
+            # Check if it has query (for search operations)
+            elif "query" in tool_input:
+                # For search operations, we might not have files yet
+                # Return empty array or handle query differently
+                return []
+            # Check if it has file_path (single file read)
+            elif "file_path" in tool_input:
+                file_path = tool_input["file_path"]
+                return [file_path] if file_path else []
+            # Check for relativeWorkspacePath (for consistency)
+            elif "relativeWorkspacePath" in tool_input:
+                relative_path = tool_input["relativeWorkspacePath"]
+                return [relative_path] if relative_path else []
         
-        # For update operations, extract file_path if it exists
-        if normalized_tool_name == "update":
-            if isinstance(tool_input, dict):
-                # Check for file_path (Copilot format)
-                if "file_path" in tool_input:
-                    return tool_input["file_path"]
-                # Also check for relativeWorkspacePath (for consistency)
-                elif "relativeWorkspacePath" in tool_input:
-                    return tool_input["relativeWorkspacePath"]
-            elif isinstance(tool_input, str):
-                return tool_input
+        # If it's already a string, wrap in array
+        elif isinstance(tool_input, str):
+            return [tool_input] if tool_input else []
         
-        # For todo operations, transform from output format to input format
-        if normalized_tool_name == "todo":
-            # Copilot stores todos in tool_output, so we need to transform it
-            if tool_output and isinstance(tool_output, dict):
-                todo_list = tool_output.get("todoList", [])
-                if isinstance(todo_list, list) and len(todo_list) > 0:
-                    # Transform todoList to the normalized format
-                    todos = []
-                    for todo_item in todo_list:
-                        if isinstance(todo_item, dict):
-                            # Copilot uses "title" for the name, "description" for description
-                            todo_name = todo_item.get("title", "")
-                            # Skip todos with empty names
-                            if todo_name and todo_name.strip():
-                                # Map status: "not-started" -> "pending", others keep as-is
-                                status = todo_item.get("status", "pending")
-                                if status == "not-started":
-                                    status = "pending"
-                                
-                                todos.append({
-                                    "name": todo_name,
-                                    "status": status
-                                })
-                    
-                    # If no valid todos, skip this tool entirely
-                    if not todos:
-                        return None
-                    
-                    # Build result (no description for Copilot todos)
-                    return {
-                        "todos": todos
-                    }
-            
-            # If tool_input has todo structure, normalize it like Cursor
-            if isinstance(tool_input, dict):
-                # Extract overview as description (skip if empty)
-                description = tool_input.get("overview", "")
-                if not description or not description.strip():
-                    description = None
-                
-                # Extract todos array and simplify (skip todos with empty names)
+        # If it's already a list, return as-is
+        elif isinstance(tool_input, list):
+            return tool_input
+        
+        return tool_input
+    
+    def _normalize_copilot_terminal_input(self, tool_input: Any, tool_output: Any) -> Any:
+        """Normalize terminal tool input for Copilot."""
+        if tool_output and isinstance(tool_output, dict):
+            command_line = tool_output.get("commandLine", {})
+            if isinstance(command_line, dict):
+                original_command = command_line.get("original", "")
+                if original_command:
+                    return original_command
+        # Fallback: if it's already a string, return as-is
+        if isinstance(tool_input, str):
+            return tool_input
+        return tool_input
+    
+    def _normalize_copilot_update_input(self, tool_input: Any) -> Any:
+        """Normalize update tool input for Copilot."""
+        if isinstance(tool_input, dict):
+            # Check for file_path (Copilot format)
+            if "file_path" in tool_input:
+                return tool_input["file_path"]
+            # Also check for relativeWorkspacePath (for consistency)
+            elif "relativeWorkspacePath" in tool_input:
+                return tool_input["relativeWorkspacePath"]
+        elif isinstance(tool_input, str):
+            return tool_input
+        return tool_input
+    
+    def _normalize_copilot_todo_input(self, tool_input: Any, tool_output: Any) -> Any:
+        """Normalize todo tool input for Copilot."""
+        # Copilot stores todos in tool_output, so we need to transform it
+        if tool_output and isinstance(tool_output, dict):
+            todo_list = tool_output.get("todoList", [])
+            if isinstance(todo_list, list) and len(todo_list) > 0:
+                # Transform todoList to the normalized format
                 todos = []
-                todos_raw = tool_input.get("todos", [])
-                if isinstance(todos_raw, list):
-                    for todo_item in todos_raw:
-                        if isinstance(todo_item, dict):
-                            todo_name = todo_item.get("content", "")
-                            # Skip todos with empty names
-                            if todo_name and todo_name.strip():
-                                simplified_todo = {
-                                    "name": todo_name,
-                                    "status": todo_item.get("status", "")
-                                }
-                                todos.append(simplified_todo)
+                for todo_item in todo_list:
+                    if isinstance(todo_item, dict):
+                        # Copilot uses "title" for the name, "description" for description
+                        todo_name = todo_item.get("title", "")
+                        # Skip todos with empty names
+                        if todo_name and todo_name.strip():
+                            # Map status: "not-started" -> "pending", others keep as-is
+                            status = todo_item.get("status", "pending")
+                            if status == "not-started":
+                                status = "pending"
+                            
+                            todos.append({
+                                "name": todo_name,
+                                "status": status
+                            })
                 
-                # If no description and no valid todos, skip this tool entirely
-                if description is None and not todos:
+                # If no valid todos, skip this tool entirely
+                if not todos:
                     return None
                 
-                # Build result, only include description if it's not empty
-                result = {"todos": todos}
-                if description is not None:
-                    result["description"] = description
-                
-                return result
+                # Build result (no description for Copilot todos)
+                return {
+                    "todos": todos
+                }
         
-        # TODO: Add other Copilot-specific input normalization logic
+        # If tool_input has todo structure, normalize it like Cursor
+        if isinstance(tool_input, dict):
+            # Extract overview as description (skip if empty)
+            description = tool_input.get("overview", "")
+            if not description or not description.strip():
+                description = None
+            
+            # Extract todos array and simplify (skip todos with empty names)
+            todos = []
+            todos_raw = tool_input.get("todos", [])
+            if isinstance(todos_raw, list):
+                for todo_item in todos_raw:
+                    if isinstance(todo_item, dict):
+                        todo_name = todo_item.get("content", "")
+                        # Skip todos with empty names
+                        if todo_name and todo_name.strip():
+                            simplified_todo = {
+                                "name": todo_name,
+                                "status": todo_item.get("status", "")
+                            }
+                            todos.append(simplified_todo)
+            
+            # If no description and no valid todos, skip this tool entirely
+            if description is None and not todos:
+                return None
+            
+            # Build result, only include description if it's not empty
+            result = {"todos": todos}
+            if description is not None:
+                result["description"] = description
+            
+            return result
+        
+        return tool_input
+    
+    def _normalize_copilot_create_input(self, tool_input: Any) -> Any:
+        """Normalize create tool input for Copilot."""
+        return tool_input
+    
+    def _normalize_copilot_delete_input(self, tool_input: Any) -> Any:
+        """Normalize delete tool input for Copilot."""
+        return tool_input
+    
+    def _normalize_copilot_web_request_input(self, tool_input: Any) -> Any:
+        """Normalize web_request tool input for Copilot."""
         return tool_input
     
     def _normalize_copilot_tool_output(self, tool_name: str, normalized_tool_name: str, tool_output: Any) -> Any:
@@ -487,27 +520,50 @@ class CopilotChatFinder(BaseChatFinder):
         Returns:
             Normalized tool output
         """
-        # For web_request, always return empty output
+        # Dispatch to tool-specific normalization methods
         if normalized_tool_name == "web_request":
-            return ""
+            return self._normalize_copilot_web_request_output(tool_output)
+        elif normalized_tool_name == "read":
+            return self._normalize_copilot_read_output(tool_output)
+        elif normalized_tool_name == "create":
+            return self._normalize_copilot_create_output(tool_output)
+        elif normalized_tool_name == "todo":
+            return self._normalize_copilot_todo_output(tool_output)
+        elif normalized_tool_name == "terminal":
+            return self._normalize_copilot_terminal_output(tool_output)
+        elif normalized_tool_name == "update":
+            return self._normalize_copilot_update_output(tool_output)
+        elif normalized_tool_name == "delete":
+            return self._normalize_copilot_delete_output(tool_output)
         
-        # For read operations, always return empty output
-        if normalized_tool_name == "read":
-            return ""
-        
-        # For create operations, always return empty output
-        if normalized_tool_name == "create":
-            return ""
-        
-        # For todo operations, always return empty output
-        if normalized_tool_name == "todo":
-            return ""
-        
-        # For terminal operations, always return empty output
-        if normalized_tool_name == "terminal":
-            return ""
-        
-        # TODO: Add other Copilot-specific output normalization logic
+        return tool_output
+    
+    def _normalize_copilot_web_request_output(self, tool_output: Any) -> Any:
+        """Normalize web_request tool output for Copilot."""
+        return ""
+    
+    def _normalize_copilot_read_output(self, tool_output: Any) -> Any:
+        """Normalize read tool output for Copilot."""
+        return ""
+    
+    def _normalize_copilot_create_output(self, tool_output: Any) -> Any:
+        """Normalize create tool output for Copilot."""
+        return ""
+    
+    def _normalize_copilot_todo_output(self, tool_output: Any) -> Any:
+        """Normalize todo tool output for Copilot."""
+        return ""
+    
+    def _normalize_copilot_terminal_output(self, tool_output: Any) -> Any:
+        """Normalize terminal tool output for Copilot."""
+        return ""
+    
+    def _normalize_copilot_update_output(self, tool_output: Any) -> Any:
+        """Normalize update tool output for Copilot."""
+        return tool_output
+    
+    def _normalize_copilot_delete_output(self, tool_output: Any) -> Any:
+        """Normalize delete tool output for Copilot."""
         return tool_output
     
     def _normalize_copilot_tool_usage(self, tool_name: str, tool_input: Any, tool_output: Any) -> Optional[Dict[str, Any]]:
