@@ -115,7 +115,7 @@ def select_chat_source() -> str:
 
 
 def select_conversation(finder) -> Optional[dict]:
-    """List and select a conversation.
+    """List and select a conversation with pagination support.
     
     Args:
         finder: Chat finder instance
@@ -136,46 +136,114 @@ def select_conversation(finder) -> Optional[dict]:
         console.print("[yellow]No conversations found.[/yellow]")
         return None
     
-    console.print(f"\n[bold]Found {len(metadata_list)} conversations:[/bold]\n")
+    # Sort by date (newest first)
+    # Date format is "YYYY-MM-DD", so we can sort as strings, but handle missing dates
+    def get_sort_key(chat: dict) -> str:
+        """Get sort key for chat - newest dates first."""
+        date_str = chat.get("date", "")
+        if not date_str or date_str == "Unknown":
+            # Put chats without dates at the end
+            return "0000-00-00"
+        return date_str
     
-    # Display conversations in a table (show first 50 for readability)
-    max_display = min(50, len(metadata_list))
-    table = Table(show_header=True, header_style="bold magenta")
-    table.add_column("#", style="cyan", width=4)
-    table.add_column("Title", style="white", width=60)
-    table.add_column("Date", style="green", width=12)
-    table.add_column("ID", style="dim", width=10)
+    metadata_list.sort(key=get_sort_key, reverse=True)
     
-    for idx, chat in enumerate(metadata_list[:max_display], 1):
-        title = chat.get("title", "Untitled")
-        if len(title) > 55:
-            title = title[:52] + "..."
-        table.add_row(
-            str(idx),
-            title,
-            chat.get("date", "Unknown"),
-            chat.get("id", "")[:8]
-        )
+    # Pagination settings
+    page_size = 50
+    total_chats = len(metadata_list)
+    total_pages = (total_chats + page_size - 1) // page_size
+    current_page = 1
     
-    console.print(table)
+    def display_page(page: int) -> None:
+        """Display a specific page of conversations."""
+        start_idx = (page - 1) * page_size
+        end_idx = min(start_idx + page_size, total_chats)
+        page_chats = metadata_list[start_idx:end_idx]
+        
+        console.print(f"\n[bold]Found {total_chats} conversations:[/bold]")
+        console.print(f"[dim]Page {page} of {total_pages} (showing {start_idx + 1}-{end_idx} of {total_chats})[/dim]\n")
+        
+        table = Table(show_header=True, header_style="bold magenta")
+        table.add_column("#", style="cyan", width=4)
+        table.add_column("Title", style="white", width=60)
+        table.add_column("Date", style="green", width=12)
+        # ID column width set to 18 to display full 16-character hex IDs (matching finder.py output)
+        table.add_column("ID", style="dim", width=18)
+        
+        for idx, chat in enumerate(page_chats, start=start_idx + 1):
+            title = chat.get("title", "Untitled")
+            if len(title) > 55:
+                title = title[:52] + "..."
+            table.add_row(
+                str(idx),
+                title,
+                chat.get("date", "Unknown"),
+                chat.get("id", "")  # Show full ID, not truncated
+            )
+        
+        console.print(table)
+        
+        # Show pagination hints if there are multiple pages
+        if total_pages > 1:
+            pagination_hints = []
+            if page > 1:
+                pagination_hints.append("[cyan]'p'[/cyan] or [cyan]'prev'[/cyan] for previous page")
+            if page < total_pages:
+                pagination_hints.append("[cyan]'n'[/cyan] or [cyan]'next'[/cyan] for next page")
+            if pagination_hints:
+                console.print(f"\n[dim]{' | '.join(pagination_hints)}[/dim]")
     
-    if len(metadata_list) > max_display:
-        console.print(f"[dim]... and {len(metadata_list) - max_display} more conversations (all are selectable)[/dim]")
+    # Display first page
+    display_page(current_page)
     
-    # Prompt for selection
+    # Main selection loop with pagination
     while True:
         try:
             choice = Prompt.ask(
-                f"\n[bold]Choose conversation (1-{len(metadata_list)})[/bold]",
-                default="1"
+                f"\n[bold]Choose conversation (1-{total_chats}) or navigate pages[/bold]",
+                default=""
             )
+            
+            choice_lower = choice.lower().strip()
+            
+            # Handle pagination commands
+            if choice_lower in ['n', 'next']:
+                if current_page < total_pages:
+                    current_page += 1
+                    display_page(current_page)
+                else:
+                    console.print("[yellow]Already on the last page[/yellow]")
+                continue
+            elif choice_lower in ['p', 'prev', 'previous']:
+                if current_page > 1:
+                    current_page -= 1
+                    display_page(current_page)
+                else:
+                    console.print("[yellow]Already on the first page[/yellow]")
+                continue
+            elif choice_lower.startswith('page '):
+                try:
+                    page_num = int(choice_lower.replace('page ', ''))
+                    if 1 <= page_num <= total_pages:
+                        current_page = page_num
+                        display_page(current_page)
+                    else:
+                        console.print(f"[red]Please enter a page number between 1 and {total_pages}[/red]")
+                except ValueError:
+                    console.print("[red]Invalid page number format. Use 'page N' where N is the page number[/red]")
+                continue
+            
+            # Handle conversation selection
+            if not choice:
+                continue
+                
             idx = int(choice) - 1
-            if 0 <= idx < len(metadata_list):
+            if 0 <= idx < total_chats:
                 return metadata_list[idx]
             else:
-                console.print(f"[red]Please enter a number between 1 and {len(metadata_list)}[/red]")
+                console.print(f"[red]Please enter a number between 1 and {total_chats}[/red]")
         except ValueError:
-            console.print("[red]Please enter a valid number[/red]")
+            console.print("[red]Please enter a valid number, or use 'n'/'next'/'p'/'prev' for pagination[/red]")
         except KeyboardInterrupt:
             console.print("\n[yellow]Operation cancelled[/yellow]")
             return None
