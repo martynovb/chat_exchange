@@ -480,7 +480,7 @@ class TestCopilotChatFinder:
             assert result is not None
             tool_messages = [m for m in result["messages"] if m.get("type") == "tool"]
             assert len(tool_messages) > 0
-            assert tool_messages[0]["content"]["toolName"] == "copilot_findFiles"
+            assert tool_messages[0]["content"]["tool_name"] == "read"
     
     def test_extract_tool_input(self):
         """Test extracting tool input."""

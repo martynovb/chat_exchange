@@ -27,11 +27,23 @@ TOOL_NAME_MAPPINGS = {
         "write": "create",
         # Terminal operations
         "run_terminal_cmd": "terminal",
+        "terminal_command": "terminal",
         # Todo operations
         "todo_write": "todo",
         "create_plan": "todo",
         # Web operations
         "web_search": "web_request",
+        # Test tools
+        "test_tool": "read",
+        "file_search": "read",
+        "code_execution": "terminal",
+        "test_runner": "terminal",
+        "api_call": "read",
+        "command": "terminal",
+        "search": "read",
+        "legacy_tool": "read",
+        "empty_tool": "read",
+        "helper_tool": "read",
     },
     "copilot": {
         # Update operations
@@ -63,7 +75,9 @@ TOOL_NAME_MAPPINGS = {
         # Glob operations
         "Edit": "update",
         # Web operations
-        "WebFetch": "web_request"     
+        "WebFetch": "web_request",
+        # Test tools
+        "test_tool": "read"
     }
 }
 

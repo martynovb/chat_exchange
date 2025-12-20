@@ -163,7 +163,9 @@ class TestBaseChatFinder:
     def test_get_timezone_offset_exception(self):
         """Test _get_timezone_offset exception handling."""
         finder = ConcreteChatFinder()
-        with patch('time.timezone', side_effect=Exception("Test error")):
-            result = finder._get_timezone_offset()
-            assert result == "UTC+0"
+        with patch('src.domain.base_chat_finder.time.timezone', side_effect=Exception("Test error")):
+            with patch('src.domain.base_chat_finder.time.daylight', side_effect=Exception("Test error")):
+                with patch('src.domain.base_chat_finder.time.altzone', side_effect=Exception("Test error")):
+                    result = finder._get_timezone_offset()
+                    assert result == "UTC+0"
 

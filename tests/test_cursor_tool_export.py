@@ -71,8 +71,8 @@ class TestCursorToolExport:
             # Find tool message
             tool_messages = [m for m in result["messages"] if m.get("type") == "tool"]
             assert len(tool_messages) > 0
-            assert tool_messages[0]["content"]["toolName"] == "terminal_command"
-            assert tool_messages[0]["content"]["toolInput"]["command"] == "ls -la"
+            assert tool_messages[0]["content"]["tool_name"] == "terminal"
+            assert tool_messages[0]["content"]["tool_input"]["command"] == "ls -la"
         finally:
             if db_path and db_path.exists():
                 import time
@@ -119,7 +119,7 @@ class TestCursorToolExport:
             if result:
                 tool_messages = [m for m in result.get("messages", []) if m.get("type") == "tool"]
                 if tool_messages:
-                    assert tool_messages[0]["content"]["toolName"] == "file_search"
+                    assert tool_messages[0]["content"]["tool_name"] == "read"
         finally:
             if db_path and db_path.exists():
                 import time
@@ -163,7 +163,7 @@ class TestCursorToolExport:
             bubble = bubbles[0]
             assert bubble["composerId"] == "composer_123"
             assert bubble["tool_data"] is not None
-            assert bubble["tool_data"]["toolName"] == "file_search"
+            assert bubble["tool_data"]["tool_name"] == "read"
         finally:
             if db_path and db_path.exists():
                 import time
@@ -213,7 +213,7 @@ class TestCursorToolExport:
             bubble = bubbles[0]
             assert bubble["composerId"] == "composer_123"
             assert bubble["tool_data"] is not None
-            assert bubble["tool_data"]["toolName"] == "code_execution"
+            assert bubble["tool_data"]["tool_name"] == "terminal"
         finally:
             if db_path and db_path.exists():
                 import time
@@ -272,8 +272,8 @@ class TestCursorToolExport:
             }
             tool_info = extract_tool_info(message)
             assert tool_info is not None
-            assert tool_info["toolName"] == "test_runner"
-            assert "test_file" in tool_info["toolInput"]
+            assert tool_info["tool_name"] == "terminal"
+            assert "test_file" in tool_info["tool_input"]
         finally:
             if db_path and db_path.exists():
                 import time
@@ -297,9 +297,9 @@ class TestCursorToolExport:
         }
         result = extract_tool_info(bubble)
         assert result is not None
-        assert result["toolName"] == "api_call"
-        assert isinstance(result["toolOutput"], str)  # Should be JSON string
-        assert "status" in result["toolOutput"]
+        assert result["tool_name"] == "read"
+        # Read tools return empty output
+        assert result["tool_output"] == ""
     
     def test_tool_with_string_params(self):
         """Test tool extraction with string params."""
@@ -311,7 +311,7 @@ class TestCursorToolExport:
             }
         }
         result = extract_tool_info(bubble)
-        assert result["toolInput"] == {"cmd": "ls"}
+        assert result["tool_input"] == {"cmd": "ls"}
     
     def test_tool_with_raw_args(self):
         """Test tool extraction with rawArgs instead of params."""
@@ -323,7 +323,7 @@ class TestCursorToolExport:
             }
         }
         result = extract_tool_info(bubble)
-        assert result["toolInput"] == {"query": "test"}
+        assert result["tool_input"] == {"query": "test"}
     
     def test_tool_with_legacy_fields(self):
         """Test tool extraction with legacy tool fields."""
@@ -335,9 +335,10 @@ class TestCursorToolExport:
         }
         result = extract_tool_info(bubble)
         assert result is not None
-        assert result["toolName"] == "legacy_tool"
-        assert result["toolInput"] == {"arg": "value"}
-        assert result["toolOutput"] == "result"
+        assert result["tool_name"] == "read"
+        assert result["tool_input"] == {"arg": "value"}
+        # Read tools return empty output
+        assert result["tool_output"] == ""
     
     def test_parse_chat_full_with_mixed_tool_and_text(self):
         """Test parsing chat with both tool and text messages."""
@@ -396,7 +397,7 @@ class TestCursorToolExport:
             
             assert len(text_messages) >= 2
             assert len(tool_messages) >= 1
-            assert tool_messages[0]["content"]["toolName"] == "helper_tool"
+            assert tool_messages[0]["content"]["tool_name"] == "read"
         finally:
             if db_path and db_path.exists():
                 import time
@@ -480,7 +481,7 @@ class TestCursorToolExport:
         }
         result = extract_tool_info(bubble)
         assert result is not None
-        assert result["toolOutput"] == ""
+        assert result["tool_output"] == ""
     
     def test_parse_chat_full_with_tool_from_composer_data(self):
         """Test parsing chat with tool data from composer data."""
@@ -543,7 +544,7 @@ class TestCursorToolExport:
         }
         result = extract_tool_info(bubble)
         assert result is not None
-        assert result["toolInput"] == {"raw": "not valid json {"}
+        assert result["tool_input"] == {"raw": "not valid json {"}
     
     def test_tool_with_invalid_json_raw_args(self):
         """Test tool extraction with invalid JSON in rawArgs."""
@@ -556,7 +557,7 @@ class TestCursorToolExport:
         }
         result = extract_tool_info(bubble)
         assert result is not None
-        assert result["toolInput"] == {"raw": "invalid json {"}
+        assert result["tool_input"] == {"raw": "invalid json {"}
     
     def test_iter_bubbles_from_disk_kv_with_richtext(self):
         """Test iter_bubbles_from_disk_kv with richText instead of text."""

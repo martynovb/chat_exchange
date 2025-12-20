@@ -1727,13 +1727,26 @@ def transform_chat_to_export_format(chat: Dict[str, Any]) -> Dict[str, Any]:
         # Build message object based on type
         if msg_type == "tool" and isinstance(content, dict):
             # Tool message - use normalized format
+            # Handle both snake_case and camelCase formats
+            tool_name = content.get("tool_name") or content.get("toolName", "unknown")
+            tool_input = content.get("tool_input") or content.get("toolInput", {})
+            tool_output = content.get("tool_output") or content.get("toolOutput", "")
+            
+            # If we have a tool name (not "unknown"), normalize it
+            if tool_name != "unknown":
+                normalized = _normalize_cursor_tool_usage(tool_name, tool_input, tool_output)
+                if normalized:
+                    tool_name = normalized["tool_name"]
+                    tool_input = normalized["tool_input"]
+                    tool_output = normalized["tool_output"]
+            
             message_obj = {
                 "role": role,
                 "type": "tool",
                 "content": {
-                    "tool_name": content.get("tool_name", "unknown"),
-                    "tool_input": content.get("tool_input", {}),
-                    "tool_output": content.get("tool_output", "")
+                    "tool_name": tool_name,
+                    "tool_input": tool_input,
+                    "tool_output": tool_output
                 },
                 "timestamp": msg_timestamp
             }

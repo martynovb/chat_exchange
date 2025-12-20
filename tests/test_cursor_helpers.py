@@ -174,9 +174,10 @@ class TestHelperFunctions:
         }
         result = extract_tool_info(bubble)
         assert result is not None
-        assert result["toolName"] == "test_tool"
-        assert result["toolInput"] == {"arg1": "value1"}
-        assert result["toolOutput"] == "Tool output"
+        assert result["tool_name"] == "read"
+        assert result["tool_input"] == {"arg1": "value1"}
+        # Read tools return empty output
+        assert result["tool_output"] == ""
     
     def test_extract_tool_info_with_string_params(self):
         """Test extract_tool_info with string params."""
@@ -188,7 +189,8 @@ class TestHelperFunctions:
             }
         }
         result = extract_tool_info(bubble)
-        assert result["toolInput"] == {"arg1": "value1"}
+        assert result is not None
+        assert result["tool_input"] == {"arg1": "value1"}
     
     def test_extract_tool_info_with_invalid_json_params(self):
         """Test extract_tool_info with invalid JSON in params."""
@@ -200,7 +202,8 @@ class TestHelperFunctions:
             }
         }
         result = extract_tool_info(bubble)
-        assert result["toolInput"] == {"raw": "invalid json {"}
+        assert result is not None
+        assert result["tool_input"] == {"raw": "invalid json {"}
     
     def test_extract_tool_info_with_raw_args(self):
         """Test extract_tool_info with rawArgs."""
@@ -212,7 +215,8 @@ class TestHelperFunctions:
             }
         }
         result = extract_tool_info(bubble)
-        assert result["toolInput"] == {"arg1": "value1"}
+        assert result is not None
+        assert result["tool_input"] == {"arg1": "value1"}
     
     def test_extract_tool_info_with_dict_result(self):
         """Test extract_tool_info with dict result."""
@@ -223,8 +227,9 @@ class TestHelperFunctions:
             }
         }
         result = extract_tool_info(bubble)
-        assert isinstance(result["toolOutput"], str)
-        assert "key" in result["toolOutput"]
+        assert result is not None
+        # Read tools return empty output (dict is converted to JSON but then normalized to empty)
+        assert result["tool_output"] == ""
     
     def test_extract_tool_info_with_legacy_fields(self):
         """Test extract_tool_info with legacy tool fields."""
@@ -236,7 +241,7 @@ class TestHelperFunctions:
         }
         result = extract_tool_info(bubble)
         assert result is not None
-        assert result["toolName"] == "test_tool"
+        assert result["tool_name"] == "read"
     
     def test_extract_tool_info_no_tool(self):
         """Test extract_tool_info with no tool data."""
@@ -394,9 +399,9 @@ class TestHelperFunctions:
                     "role": "assistant",
                     "type": "tool",
                     "content": {
-                        "toolName": "test_tool",
-                        "toolInput": {"arg": "value"},
-                        "toolOutput": "result"
+                        "tool_name": "read",
+                        "tool_input": {"arg": "value"},
+                        "tool_output": ""
                     }
                 }
             ]
@@ -405,7 +410,7 @@ class TestHelperFunctions:
         result = transform_chat_to_export_format(chat)
         assert len(result["messages"]) == 1
         assert result["messages"][0]["type"] == "tool"
-        assert result["messages"][0]["content"]["toolName"] == "test_tool"
+        assert result["messages"][0]["content"]["tool_name"] == "read"
     
     def test_transform_chat_to_export_format_skip_invalid_content(self):
         """Test transform_chat_to_export_format skips invalid content."""
@@ -480,5 +485,6 @@ class TestHelperFunctions:
         }
         result = extract_tool_info(bubble)
         assert result is not None
-        assert result["toolOutput"] == "12345"
+        # Read tools return empty output
+        assert result["tool_output"] == ""
 

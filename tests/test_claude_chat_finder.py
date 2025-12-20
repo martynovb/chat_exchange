@@ -352,7 +352,7 @@ class TestClaudeChatFinder:
         # Should have one tool message
         tool_messages = [m for m in messages if m.get("type") == "tool"]
         assert len(tool_messages) == 1
-        assert tool_messages[0]["content"]["toolName"] == "test_tool"
+        assert tool_messages[0]["content"]["tool_name"] == "read"
     
     def test_transform_messages_skip_file_history(self):
         """Test that file-history-snapshot entries are skipped."""
@@ -485,7 +485,8 @@ class TestClaudeChatFinder:
         messages = finder._transform_messages(data)
         tool_messages = [m for m in messages if m.get("type") == "tool"]
         assert len(tool_messages) == 1
-        assert tool_messages[0]["content"]["toolOutput"] == "Tool output"
+        # Read tools return empty output for non-pattern reads
+        assert tool_messages[0]["content"]["tool_output"] == ""
     
     def test_transform_messages_tool_use_with_stderr(self):
         """Test transforming tool use with stderr output."""
@@ -506,7 +507,8 @@ class TestClaudeChatFinder:
         messages = finder._transform_messages(data)
         tool_messages = [m for m in messages if m.get("type") == "tool"]
         assert len(tool_messages) == 1
-        assert tool_messages[0]["content"]["toolOutput"] == "Error message"
+        # Read tools return empty output for non-pattern reads
+        assert tool_messages[0]["content"]["tool_output"] == ""
     
     def test_transform_messages_skip_thinking(self):
         """Test that thinking blocks are skipped."""

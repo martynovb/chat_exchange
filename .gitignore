@@ -199,3 +199,4 @@ results/*.json
 ui/config.js
 gitlab
 .cursor/**
+src/data/results/**
