@@ -5,10 +5,10 @@ Comprehensive tests for ID generation across all chat finders.
 
 import pytest
 import pathlib
-from claude_chat_finder import ClaudeChatFinder
-from copilot_chat_finder import CopilotChatFinder
-from cursor_chats_finder import CursorChatFinder
-from base_chat_finder import BaseChatFinder
+from src.domain.claude_chat_finder import ClaudeChatFinder
+from src.domain.copilot_chat_finder import CopilotChatFinder
+from src.domain.cursor_chats_finder import CursorChatFinder
+from src.domain.base_chat_finder import BaseChatFinder
 
 
 class TestIDGeneration:

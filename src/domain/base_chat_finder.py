@@ -109,7 +109,9 @@ class BaseChatFinder(ABC):
         Returns:
             Path to the result directory.
         """
-        return pathlib.Path("results")
+        # Get the src directory (parent of domain)
+        src_dir = pathlib.Path(__file__).parent.parent
+        return src_dir / "data" / "results"
     
     def _get_default_output_path(self, filename: str) -> pathlib.Path:
         """Get the default output path in the result folder.

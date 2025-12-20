@@ -8,7 +8,7 @@ import json
 import pathlib
 import sqlite3
 import tempfile
-from cursor_chats_finder import (
+from src.domain.cursor_chats_finder import (
     CursorChatFinder,
     iter_bubbles_from_disk_kv,
     iter_chat_from_item_table,
@@ -517,7 +517,7 @@ class TestCursorToolExport:
                 con.close()
             
             # Import the function to test it
-            from cursor_chats_finder import iter_composer_data
+            from src.domain.cursor_chats_finder import iter_composer_data
             composers = list(iter_composer_data(db_path))
             assert len(composers) > 0
             cid, data, _ = composers[0]

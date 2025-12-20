@@ -26,8 +26,8 @@ import time
 import datetime
 from typing import List, Optional, Dict, Any
 
-from base_chat_finder import BaseChatFinder
-from tool_normalizer import tool_name_normalization
+from .base_chat_finder import BaseChatFinder
+from .tool_normalizer import tool_name_normalization
 
 """This module exports Claude chat JSON/JSONL files in a standardized format."""
 

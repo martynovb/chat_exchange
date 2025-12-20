@@ -10,7 +10,7 @@ import tempfile
 import sqlite3
 import platform
 from unittest.mock import Mock, patch, MagicMock
-from cursor_chats_finder import CursorChatFinder
+from src.domain.cursor_chats_finder import CursorChatFinder
 
 
 class TestCursorChatFinder:

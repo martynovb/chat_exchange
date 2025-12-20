@@ -9,8 +9,8 @@ import time
 import re
 from typing import List, Optional, Dict, Any
 
-from base_chat_finder import BaseChatFinder
-from tool_normalizer import tool_name_normalization
+from .base_chat_finder import BaseChatFinder
+from .tool_normalizer import tool_name_normalization
 
 """This module exports Copilot chat JSON files in the new standardized format."""
 

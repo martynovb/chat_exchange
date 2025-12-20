@@ -9,7 +9,7 @@ import pathlib
 import tempfile
 import shutil
 from unittest.mock import Mock, patch, mock_open
-from claude_chat_finder import ClaudeChatFinder
+from src.domain.claude_chat_finder import ClaudeChatFinder
 
 
 class TestClaudeChatFinder:

@@ -8,7 +8,7 @@ import json
 import pathlib
 import sqlite3
 import tempfile
-from cursor_chats_finder import (
+from src.domain.cursor_chats_finder import (
     j,
     extract_text_from_richtext,
     extract_tool_info,
@@ -290,7 +290,7 @@ class TestHelperFunctions:
     
     def test_timestamp_to_iso_milliseconds(self):
         """Test timestamp_to_iso with milliseconds."""
-        from cursor_chats_finder import timestamp_to_iso
+        from src.domain.cursor_chats_finder import timestamp_to_iso
         import datetime
         
         # Test with milliseconds (> 1e10)
@@ -301,7 +301,7 @@ class TestHelperFunctions:
     
     def test_timestamp_to_iso_seconds(self):
         """Test timestamp_to_iso with seconds."""
-        from cursor_chats_finder import timestamp_to_iso
+        from src.domain.cursor_chats_finder import timestamp_to_iso
         
         # Test with seconds (< 1e10)
         timestamp_sec = 1609459200  # 2021-01-01 00:00:00 UTC in seconds
@@ -311,7 +311,7 @@ class TestHelperFunctions:
     
     def test_timestamp_to_iso_none(self):
         """Test timestamp_to_iso with None."""
-        from cursor_chats_finder import timestamp_to_iso
+        from src.domain.cursor_chats_finder import timestamp_to_iso
         import datetime
         
         default_time = datetime.datetime(2021, 1, 1, 12, 0, 0, tzinfo=datetime.timezone.utc)
@@ -321,7 +321,7 @@ class TestHelperFunctions:
     
     def test_timestamp_to_iso_invalid(self):
         """Test timestamp_to_iso with invalid type."""
-        from cursor_chats_finder import timestamp_to_iso
+        from src.domain.cursor_chats_finder import timestamp_to_iso
         import datetime
         
         default_time = datetime.datetime(2021, 1, 1, 12, 0, 0)
@@ -330,7 +330,7 @@ class TestHelperFunctions:
     
     def test_get_timezone_offset(self):
         """Test get_timezone_offset function."""
-        from cursor_chats_finder import get_timezone_offset
+        from src.domain.cursor_chats_finder import get_timezone_offset
         
         result = get_timezone_offset()
         assert result.startswith("UTC")
@@ -338,7 +338,7 @@ class TestHelperFunctions:
     
     def test_transform_chat_to_export_format(self):
         """Test transform_chat_to_export_format function."""
-        from cursor_chats_finder import transform_chat_to_export_format
+        from src.domain.cursor_chats_finder import transform_chat_to_export_format
         
         chat = {
             "session": {
@@ -365,7 +365,7 @@ class TestHelperFunctions:
     
     def test_transform_chat_to_export_format_no_title(self):
         """Test transform_chat_to_export_format with no title."""
-        from cursor_chats_finder import transform_chat_to_export_format
+        from src.domain.cursor_chats_finder import transform_chat_to_export_format
         
         chat = {
             "session": {
@@ -381,7 +381,7 @@ class TestHelperFunctions:
     
     def test_transform_chat_to_export_format_with_tool(self):
         """Test transform_chat_to_export_format with tool message."""
-        from cursor_chats_finder import transform_chat_to_export_format
+        from src.domain.cursor_chats_finder import transform_chat_to_export_format
         
         chat = {
             "session": {
@@ -409,7 +409,7 @@ class TestHelperFunctions:
     
     def test_transform_chat_to_export_format_skip_invalid_content(self):
         """Test transform_chat_to_export_format skips invalid content."""
-        from cursor_chats_finder import transform_chat_to_export_format
+        from src.domain.cursor_chats_finder import transform_chat_to_export_format
         
         chat = {
             "session": {
@@ -432,7 +432,7 @@ class TestHelperFunctions:
     
     def test_transform_chat_to_export_format_seconds_timestamp(self):
         """Test transform_chat_to_export_format with seconds timestamp."""
-        from cursor_chats_finder import transform_chat_to_export_format
+        from src.domain.cursor_chats_finder import transform_chat_to_export_format
         
         chat = {
             "session": {
@@ -449,7 +449,7 @@ class TestHelperFunctions:
     
     def test_transform_chat_to_export_format_unknown_project(self):
         """Test transform_chat_to_export_format with unknown project."""
-        from cursor_chats_finder import transform_chat_to_export_format
+        from src.domain.cursor_chats_finder import transform_chat_to_export_format
         
         chat = {
             "session": {

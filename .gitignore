@@ -198,3 +198,4 @@ results/*.json
 # UI config file with Supabase credentials
 ui/config.js
 gitlab
+.cursor/**

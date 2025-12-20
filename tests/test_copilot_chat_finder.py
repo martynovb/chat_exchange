@@ -9,7 +9,7 @@ import pathlib
 import tempfile
 import platform
 from unittest.mock import Mock, patch
-from copilot_chat_finder import CopilotChatFinder
+from src.domain.copilot_chat_finder import CopilotChatFinder
 
 
 class TestCopilotChatFinder:

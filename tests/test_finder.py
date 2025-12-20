@@ -9,7 +9,7 @@ import pathlib
 import tempfile
 import sys
 from unittest.mock import patch, MagicMock
-from finder import get_finder, main
+from src.presentation.finder import get_finder, main
 
 
 class TestGetFinder:
@@ -51,7 +51,7 @@ class TestMain:
     def test_main_list_mode(self, capsys):
         """Test main function in list mode (no --export, no --out)."""
         with patch('sys.argv', ['finder.py', '--type', 'claude']), \
-             patch('finder.get_finder') as mock_get_finder:
+             patch('src.presentation.finder.get_finder') as mock_get_finder:
             mock_finder = MagicMock()
             mock_finder.get_chat_metadata_list.return_value = [
                 {'id': '123', 'title': 'Test Chat', 'date': '2024-01-01'}
@@ -69,7 +69,7 @@ class TestMain:
     def test_main_export_mode(self, capsys):
         """Test main function in export mode (--export specified)."""
         with patch('sys.argv', ['finder.py', '--type', 'claude', '--export', 'test_id']), \
-             patch('finder.get_finder') as mock_get_finder:
+             patch('src.presentation.finder.get_finder') as mock_get_finder:
             mock_finder = MagicMock()
             mock_finder.parse_chat_by_id.return_value = {'title': 'Test Chat', 'messages': []}
             mock_finder._get_default_output_path.return_value = pathlib.Path('/tmp/test.json')
@@ -86,7 +86,7 @@ class TestMain:
     def test_main_export_mode_error(self, capsys):
         """Test main function in export mode with error."""
         with patch('sys.argv', ['finder.py', '--type', 'claude', '--export', 'test_id']), \
-             patch('finder.get_finder') as mock_get_finder:
+             patch('src.presentation.finder.get_finder') as mock_get_finder:
             mock_finder = MagicMock()
             mock_finder.parse_chat_by_id.side_effect = ValueError("Chat not found")
             mock_get_finder.return_value = mock_finder
@@ -100,7 +100,7 @@ class TestMain:
     def test_main_export_all_mode(self, capsys):
         """Test main function in export all mode (--out specified)."""
         with patch('sys.argv', ['finder.py', '--type', 'claude', '--out', '/tmp/output.json']), \
-             patch('finder.get_finder') as mock_get_finder:
+             patch('src.presentation.finder.get_finder') as mock_get_finder:
             mock_finder = MagicMock()
             mock_finder.export_chats.return_value = [{'title': 'Chat 1'}, {'title': 'Chat 2'}]
             mock_get_finder.return_value = mock_finder
@@ -116,7 +116,7 @@ class TestMain:
     def test_main_export_all_mode_no_export_chats(self, capsys):
         """Test main function when finder doesn't support export_chats."""
         with patch('sys.argv', ['finder.py', '--type', 'claude', '--out', '/tmp/output.json']), \
-             patch('finder.get_finder') as mock_get_finder:
+             patch('src.presentation.finder.get_finder') as mock_get_finder:
             mock_finder = MagicMock()
             del mock_finder.export_chats  # Remove the method
             mock_get_finder.return_value = mock_finder

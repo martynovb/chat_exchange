@@ -17,8 +17,8 @@ from collections import defaultdict
 from typing import Dict, Any, Iterable, List, Optional
 from pathlib import Path
 
-from base_chat_finder import BaseChatFinder
-from tool_normalizer import tool_name_normalization
+from .base_chat_finder import BaseChatFinder
+from .tool_normalizer import tool_name_normalization
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, 

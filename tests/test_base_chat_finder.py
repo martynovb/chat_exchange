@@ -6,7 +6,7 @@ Unit tests for BaseChatFinder.
 import pytest
 import pathlib
 from unittest.mock import Mock, patch
-from base_chat_finder import BaseChatFinder
+from src.domain.base_chat_finder import BaseChatFinder
 
 
 class ConcreteChatFinder(BaseChatFinder):
