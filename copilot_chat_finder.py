@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import pathlib
 import platform
 import datetime
@@ -417,15 +418,21 @@ class CopilotChatFinder(BaseChatFinder):
     
     def _normalize_copilot_update_input(self, tool_input: Any) -> Any:
         """Normalize update tool input for Copilot."""
+        # Extract only the file name from path (similar to Claude/Cursor)
         if isinstance(tool_input, dict):
             # Check for file_path (Copilot format)
             if "file_path" in tool_input:
-                return tool_input["file_path"]
+                file_path = tool_input["file_path"]
+                if isinstance(file_path, str):
+                    return os.path.basename(file_path)
             # Also check for relativeWorkspacePath (for consistency)
             elif "relativeWorkspacePath" in tool_input:
-                return tool_input["relativeWorkspacePath"]
+                relative_path = tool_input["relativeWorkspacePath"]
+                if isinstance(relative_path, str):
+                    return os.path.basename(relative_path)
         elif isinstance(tool_input, str):
-            return tool_input
+            # If it's already a string, extract filename if it looks like a path
+            return os.path.basename(tool_input)
         return tool_input
     
     def _normalize_copilot_todo_input(self, tool_input: Any, tool_output: Any) -> Any:
@@ -508,7 +515,7 @@ class CopilotChatFinder(BaseChatFinder):
         """Normalize web_request tool input for Copilot."""
         return tool_input
     
-    def _normalize_copilot_tool_output(self, tool_name: str, normalized_tool_name: str, tool_output: Any) -> Any:
+    def _normalize_copilot_tool_output(self, tool_name: str, normalized_tool_name: str, tool_output: Any, tool_input: Any = None) -> Any:
         """
         Normalize tool output for Copilot-specific tools.
         
@@ -532,7 +539,7 @@ class CopilotChatFinder(BaseChatFinder):
         elif normalized_tool_name == "terminal":
             return self._normalize_copilot_terminal_output(tool_output)
         elif normalized_tool_name == "update":
-            return self._normalize_copilot_update_output(tool_output)
+            return self._normalize_copilot_update_output(tool_output, tool_input)
         elif normalized_tool_name == "delete":
             return self._normalize_copilot_delete_output(tool_output)
         
@@ -558,9 +565,12 @@ class CopilotChatFinder(BaseChatFinder):
         """Normalize terminal tool output for Copilot."""
         return ""
     
-    def _normalize_copilot_update_output(self, tool_output: Any) -> Any:
+    def _normalize_copilot_update_output(self, tool_output: Any, tool_input: Any = None) -> Any:
         """Normalize update tool output for Copilot."""
-        return tool_output
+        # Copilot doesn't provide old content or diff information like Claude/Cursor
+        # Since we can't generate a diff, return empty string to avoid showing full file content
+        # (consistent with create tool behavior)
+        return ""
     
     def _normalize_copilot_delete_output(self, tool_output: Any) -> Any:
         """Normalize delete tool output for Copilot."""
@@ -593,7 +603,7 @@ class CopilotChatFinder(BaseChatFinder):
         if normalized_input is None:
             return None
         
-        normalized_output = self._normalize_copilot_tool_output(tool_name, normalized_name, tool_output)
+        normalized_output = self._normalize_copilot_tool_output(tool_name, normalized_name, tool_output, tool_input)
         
         return {
             "tool_name": normalized_name,
