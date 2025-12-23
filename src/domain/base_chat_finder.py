@@ -7,9 +7,11 @@ Provides unified interface for extracting chat metadata and parsing chats.
 from __future__ import annotations
 
 import hashlib
+import json
 import pathlib
 import time
 from abc import ABC, abstractmethod
+from datetime import datetime
 from typing import List, Optional, Dict, Any
 
 
@@ -123,8 +125,10 @@ class BaseChatFinder(ABC):
             Path to the default output file in result folder.
         """
         result_dir = self._get_result_dir()
-        result_dir.mkdir(exist_ok=True)
-        return result_dir / filename
+        # Save single chats to results/chats subdirectory
+        chats_dir = result_dir / "chats"
+        chats_dir.mkdir(parents=True, exist_ok=True)
+        return chats_dir / filename
     
     def _ensure_output_dir(self, output_path: pathlib.Path) -> None:
         """Ensure the parent directory of the output path exists.
@@ -184,4 +188,61 @@ class BaseChatFinder(ABC):
                 continue
         
         raise ValueError(f"Chat ID '{chat_id}' not found")
+    
+    def save_chat_list(self, metadata_list: List[Dict[str, Any]], ai_type: str) -> pathlib.Path:
+        """Save chat list to results/chat_list directory.
+        
+        Args:
+            metadata_list: List of chat metadata dicts with keys: id, title, date, file_path
+            ai_type: Type of AI (e.g., "cursor", "claude", "copilot")
+            
+        Returns:
+            Path to the saved file
+        """
+        # Get result directory and create chat_list subdirectory
+        result_dir = self._get_result_dir()
+        chat_list_dir = result_dir / "chat_list"
+        chat_list_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Generate filename: [ai_type_name]_list_date.json
+        current_date = datetime.now().strftime("%Y%m%d")
+        filename = f"{ai_type}_list_{current_date}.json"
+        output_path = chat_list_dir / filename
+        
+        # Format the chat list JSON
+        # Convert date string to ISO format for createdAt
+        chat_list = []
+        for chat in metadata_list:
+            # Convert date string (e.g., "2025-12-20") to ISO format
+            date_str = chat.get('date', '')
+            createdAt = ""
+            if date_str:
+                try:
+                    # Try to parse the date and convert to ISO format
+                    dt = datetime.strptime(date_str, "%Y-%m-%d")
+                    createdAt = dt.strftime("%Y-%m-%dT00:00:00.000000Z")
+                except ValueError:
+                    # If parsing fails, use the date string as is or empty
+                    createdAt = date_str if date_str else ""
+            
+            chat_list.append({
+                "id": chat['id'],
+                "title": chat['title'],
+                "createdAt": createdAt
+            })
+        
+        # Create the output JSON structure
+        output_data = {
+            "type": ai_type,
+            "createdAt": datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+            "list": chat_list
+        }
+        
+        # Save to file
+        output_path.write_text(
+            json.dumps(output_data, ensure_ascii=False, indent=2),
+            encoding="utf-8"
+        )
+        
+        return output_path
 

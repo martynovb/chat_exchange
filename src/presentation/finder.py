@@ -97,6 +97,10 @@ def main():
         print(f"Found {len(metadata_list)} chats:")
         for chat in metadata_list:
             print(f"  {chat['id']} - \"{chat['title']}\" ({chat['date']})")
+        
+        # Save chat list using base class method
+        output_path = finder.save_chat_list(metadata_list, args.type)
+        print(f"\nChat list saved to {output_path}")
     # Export all mode: --out specified exports all chats
     else:
         # Ensure parent directory exists
